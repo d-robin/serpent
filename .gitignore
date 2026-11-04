@@ -1,0 +1,28 @@
+# runtime state
+.env
+data/
+logs/
+run/
+*.db
+*.db-wal
+*.db-shm
+deploy/*.local.service
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ui
+ui/node_modules/
+
+# misc
+.DS_Store
+.demo/
+.conc/

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><style>.sa{stroke:#4fd1c5}.sb{stroke:#7c9cff}.sc{stroke:#8bd96b}.fa{fill:#4fd1c5}.fb{fill:#7c9cff}.fc{fill:#8bd96b}.s1{stop-color:#4fd1c5}.s2{stop-color:#7c9cff}.ink{fill:#0b0f14}.tx{fill:#e6edf3}.dim{fill:#8b9cad}</style><rect width="256" height="256" rx="56" class="tilebg" fill="#0b0f14"/><g transform="translate(28 28) scale(0.78)">
+<defs><linearGradient id="g" x1="0" y1="1" x2="0" y2="0">
+<stop offset="0" class="s2"/><stop offset="1" class="s1"/></linearGradient>
+<path id="leaf" d="M0 0 C13 -9 14 -32 0 -46 C-14 -32 -13 -9 0 0Z"/></defs>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- trunk: a coil that rises, bending like a growing tree -->
+  <path d="M46 238 C46 254 210 254 210 238 C210 222 66 224 66 208 C66 190 128 198 128 166 C128 140 104 134 106 110 C108 94 124 90 128 72"
+        stroke="url(#g)" stroke-width="18"/>
+  <!-- branches: one key fans out to many accounts -->
+  <path d="M106 114 C92 104 72 98 64 70" class="sa" stroke-width="10"/>
+  <path d="M126 150 C152 138 176 126 188 94" class="sb" stroke-width="10"/>
+  <path d="M130 184 C154 178 178 176 200 154" class="sc" stroke-width="10"/>
+</g>
+<use href="#leaf" transform="translate(64 70) rotate(-18)" class="fa"/>
+<use href="#leaf" transform="translate(188 94) rotate(22)" class="fb"/>
+<use href="#leaf" transform="translate(200 154) rotate(52)" class="fc"/>
+<!-- head, in profile, facing up-right -->
+<g transform="translate(130 50) rotate(14)">
+  <path d="M-4 -34 C14 -34 22 -14 18 6 C15 22 6 36 -4 36 C-14 36 -23 22 -24 6 C-25 -14 -16 -34 -4 -34Z" fill="url(#g)"/>
+  <circle cx="7" cy="-8" r="5.2" class="ink"/>
+  <path d="M-4 -34 L-4 -44 M-4 -44 L-11 -52 M-4 -44 L3 -52" class="sa" stroke-width="4.5"
+        stroke-linecap="round" fill="none"/>
+</g>
+</g></svg>

@@ -1,0 +1,26 @@
+[Unit]
+Description=Serpent (multi-account quota-aware SERP proxy)
+Documentation=file:///home/pi/serpent/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust User/WorkingDirectory to wherever the project lives.
+User=pi
+WorkingDirectory=/home/pi/serpent
+ExecStart=/home/pi/serpent/.venv/bin/uvicorn serpent.main:app \
+    --host 0.0.0.0 --port 8971 --no-access-log --log-level info
+Restart=always
+RestartSec=3
+# A Pi has little RAM; keep the process honest about it.
+MemoryMax=320M
+# Hardening: the service only needs its own directory.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/pi/serpent/data
+
+[Install]
+WantedBy=multi-user.target
