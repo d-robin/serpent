@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix: { python: ["3.10", "3.12", "3.13"] }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python }}", cache: pip }
       - run: pip install -e '.[dev]'
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: ui } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: ui/package-lock.json }
       - run: npm ci
@@ -32,5 +32,5 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t serpent:ci .
