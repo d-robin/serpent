@@ -1,5 +1,5 @@
 # --- build Snake Charmer ---------------------------------------------------
-FROM node:22-slim AS ui
+FROM node:26-slim AS ui
 WORKDIR /ui
 COPY ui/package.json ui/package-lock.json ./
 RUN npm ci
