@@ -48,7 +48,7 @@ Serpent, and **opens Snake Charmer
 1. **Providers**: no provider is built in. Pick yours from a preset (Serper, SerpApi,
    ScrapingDog, VALUE SERP, Brave) or enter its URL.
 2. **Accounts**: paste your provider API key(s).
-3. **Try it**: send a test search and watch the quota drop.
+3. **Search**: type a query in the Search tab and watch the quota drop.
 4. **Use it**: point your app at `http://127.0.0.1:8971/v1/search` with your *client*
    key (it was printed once and lives in `.env`).
 

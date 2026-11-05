@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A **Search** tab in Snake Charmer: type a query, get readable results (title, site, snippet)
+  from whatever the provider returns, with the raw response one click away. The request
+  shape (method, path, body template) is under Options and remembered. The old Try it tab
+  is now "Raw request".
 - One entry point, `./serpent`: the first run sets up, starts and opens the web UI;
   afterwards it opens the terminal UI. It also serves `--help` before anything is installed,
   and `./serpent dev` for UI work. Replaces `install.sh`, `ctl.sh` and `serve.sh`.

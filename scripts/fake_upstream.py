@@ -10,10 +10,9 @@ Behaviour:
 from __future__ import annotations
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
-
-import os
 
 PORT = int(os.environ.get("FAKE_UPSTREAM_PORT", "9911"))
 

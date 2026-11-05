@@ -7,11 +7,12 @@
   import Accounts from './pages/Accounts.svelte';
   import Chains from './pages/Chains.svelte';
   import Settings from './pages/Settings.svelte';
+  import Search from './pages/Search.svelte';
   import TryIt from './pages/TryIt.svelte';
 
   const tabs = [
-    ['overview', 'Overview'], ['providers', 'Providers'], ['accounts', 'Accounts'],
-    ['chains', 'Chains'], ['settings', 'Settings'], ['try', 'Try it'],
+    ['overview', 'Overview'], ['search', 'Search'], ['providers', 'Providers'], ['accounts', 'Accounts'],
+    ['chains', 'Chains'], ['settings', 'Settings'], ['try', 'Raw request'],
   ] as const;
 
   let route = $state(location.hash.slice(2) || 'overview');
@@ -105,6 +106,7 @@
       {:else if route === 'accounts'}<Accounts />
       {:else if route === 'chains'}<Chains />
       {:else if route === 'settings'}<Settings />
+      {:else if route === 'search'}<Search />
       {:else if route === 'try'}<TryIt />
       {:else}<Overview />{/if}
     </main>

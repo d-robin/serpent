@@ -10,8 +10,8 @@
       text: 'None is built in. Pick your search API from the presets (Serper, SerpApi, ScrapingDog, VALUE SERP, Brave) or enter its URL.' },
     { done: hasAccounts, title: 'Add your API keys', href: '#/accounts',
       text: 'Paste one or more provider keys. Serpent shares the credits across them and never shows a key again.' },
-    { done: hasTraffic, title: 'Send a test search', href: '#/try',
-      text: 'Run a real request through the router and watch the quota drop.' },
+    { done: hasTraffic, title: 'Send a test search', href: '#/search',
+      text: 'Type a search and watch the quota drop.' },
   ]);
   const allDone = $derived(steps.every((x) => x.done));
 </script>
