@@ -48,7 +48,7 @@
       </label>
       <label class="field">Slug<input bind:value={f.slug} required pattern="[a-z0-9][a-z0-9_-]*" maxlength="32" placeholder="serper" /></label>
       <label class="field">Name<input bind:value={f.name} placeholder="Serper" /></label>
-      <label class="field wide">Base URL<input type="url" bind:value={f.base_url} required placeholder="https://google.serper.dev" /></label>
+      <label class="field wide">Base URL<input type="url" bind:value={f.base_url} required placeholder="https://api.example.com" /></label>
       <label class="field">Auth style
         <select bind:value={f.auth_style}>
           <option value="header">header</option><option value="query">query parameter</option><option value="bearer">bearer token</option>
@@ -78,7 +78,7 @@
             {/if}
           </td>
         </tr>
-      {:else}<tr><td colspan="6" class="empty">No providers yet.</td></tr>{/each}
+      {:else}<tr><td colspan="6" class="empty">No providers yet. Choose “+ Add provider”, then pick a preset or enter your own URL.</td></tr>{/each}
     </tbody>
   </table></div>
   <p class="muted">Presets are starting points — check the provider's docs for current endpoints and auth.</p>

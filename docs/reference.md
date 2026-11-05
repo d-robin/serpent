@@ -229,7 +229,7 @@ See `.env.example` for the annotated version.
 | `BIND_HOST` / `BIND_PORT` | `0.0.0.0` / `8971` | `serpent start` begins here and walks upward until one is free |
 | `LOG_LEVEL` | `info` | JSON lines to stdout |
 | `DB_PATH` | `./data/serpent.db` | Single file + `-wal`/`-shm` |
-| `UPSTREAM_BASE_URL` | `https://google.serper.dev` | No trailing slash |
+| `UPSTREAM_BASE_URL` | *(none)* | Optional. A fresh install has no provider; add one in Snake Charmer. Setting this adopts an older single-upstream setup as a provider named `default`. No trailing slash |
 | `UPSTREAM_TIMEOUT` | `30` | Seconds |
 | `UPSTREAM_VERIFY_TLS` | `true` | |
 | `AUTH_STYLE` | `header` | `header` \| `query` \| `bearer` |

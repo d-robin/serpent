@@ -57,7 +57,7 @@ def test_providers_chains_route_roundtrip(run):
     run("providers", "add", "serper", "--preset", "serper")
     run("providers", "add", "backup", "--base-url", "https://b.test", "--auth-style", "bearer")
     listed = json.loads(run("providers", "list", "--json"))
-    assert {p["slug"] for p in listed} == {"default", "serper", "backup"}
+    assert {p["slug"] for p in listed} == {"serper", "backup"}
     run("providers", "add", "serper", "--preset", "serper", expect=1)  # duplicate
     run("chains", "add", "web", "serper", "backup")
     assert "serper -> backup" in run("chains", "list")
@@ -73,7 +73,8 @@ def test_accounts_lifecycle_and_provider_scoping(run):
     run("init")
     run("providers", "add", "serper", "--preset", "serper")
     run("accounts", "add", "--provider", "serper", "--label", "s1", "--limit", "10", "--key", "sk-secret-1234")
-    run("accounts", "add", "--label", "d1", "--key", "sk-other-5678")
+    run("providers", "add", "other", "--base-url", "https://o.test")
+    run("accounts", "add", "--provider", "other", "--label", "d1", "--key", "sk-other-5678")
     out = run("accounts", "list")
     assert "s1" in out and "****1234" in out and "sk-secret" not in out
     scoped = json.loads(run("accounts", "list", "--provider", "serper", "--json"))
@@ -93,6 +94,7 @@ def test_account_key_read_from_stdin(run, monkeypatch):
     import io
 
     run("init")
+    run("providers", "add", "main", "--preset", "serper")
     monkeypatch.setattr(cli.sys, "stdin", io.StringIO("sk-from-stdin-9999\n"))
     run("accounts", "add", "--label", "piped", "--key", "-")
     assert "****9999" in run("accounts", "list")
@@ -190,6 +192,7 @@ def test_move_safety_and_dry_run(home, run, tmp_path):
 
 def test_move_copy_carries_only_what_was_asked(home, run, tmp_path):
     run("init")
+    run("providers", "add", "main", "--preset", "serper")
     run("accounts", "add", "--label", "a", "--key", "sk-move-0001")
     dest = tmp_path / "copy"
     run("move", str(dest), "--with-data", "--no-verify")
@@ -219,6 +222,7 @@ def test_version_and_help(run, capsys):
 
 def test_seed_imports_env_accounts(run, monkeypatch):
     run("init")
+    run("providers", "add", "main", "--preset", "serper")
     monkeypatch.setenv("SERP_ACCOUNTS", "one:sk-seed-1111,two:sk-seed-2222")
     assert "imported 2" in run("seed")
     assert "imported 0" in run("seed")
@@ -246,6 +250,7 @@ def test_second_account_on_a_provider_prints_a_terms_warning(tmp_path, capsys, m
     from serpent import cli
 
     assert cli.main(["init"]) == 0
+    assert cli.main(["providers", "add", "main", "--preset", "serper"]) == 0
     assert cli.main(["accounts", "add", "--label", "a", "--key", "k1"]) == 0
     capsys.readouterr()
     assert cli.main(["accounts", "add", "--label", "b", "--key", "k2"]) == 0

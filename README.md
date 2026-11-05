@@ -44,8 +44,8 @@ git clone https://github.com/d-robin/serpent && cd serpent && ./install.sh
 That's it. `install.sh` sets everything up, starts Serpent, and **opens Snake Charmer
 (the web UI) in your browser, already signed in**. Then, in the UI:
 
-1. **Providers**: Serper is preconfigured. Add another from a preset (SerpApi,
-   ScrapingDog, VALUE SERP, Brave) or enter your own.
+1. **Providers**: no provider is built in. Pick yours from a preset (Serper, SerpApi,
+   ScrapingDog, VALUE SERP, Brave) or enter its URL.
 2. **Accounts**: paste your provider API key(s).
 3. **Try it**: send a test search and watch the quota drop.
 4. **Use it**: point your app at `http://127.0.0.1:8971/v1/search` with your *client*
@@ -73,6 +73,21 @@ No provider key yet? `scripts/demo.sh` runs a throwaway instance with a fake pro
 
 > Serpent listens on `127.0.0.1` only, so nothing is exposed until you choose
 > (`serpent up --host 0.0.0.0`). Before you do, read [SECURITY.md](SECURITY.md).
+
+## Uninstall, or change how it is deployed
+
+```bash
+.venv/bin/serpent uninstall            # shows what it found, asks before changing anything
+```
+
+It looks at what is actually on disk (the running server, `.venv`, logs, runtime files,
+your data), shows a plan, then **asks whether to keep your data** (the database with
+accounts and provider keys, plus `.env`). Keeping it is the default, so you can redeploy
+another way (another folder, Docker, systemd) and pick up where you left off. When it
+finishes it checks each item again and reports what was removed, kept, or still needs you.
+It never deletes the source folder and never runs `sudo`; for a systemd service or a
+`pip`/`pipx` install it prints the exact command to run. Options: `--dry-run`, `--yes`,
+`--keep-data`, `--delete-data`.
 
 ## Documentation
 

@@ -39,9 +39,10 @@ docker build -t serpent .
 docker run -d --name serpent -p 8971:8971 \
   -v serpent-data:/data \
   -e ROUTER_KEYS='admin-key:admin,client-key:client' \
-  -e UPSTREAM_BASE_URL='https://google.serper.dev' \
   --restart unless-stopped serpent
 ```
+
+Then open `http://<host>:8971/ui/`, sign in with the admin key and add your provider.
 
 ### Sizing
 
@@ -81,6 +82,12 @@ stop the service first.
 - `GET /docs` and `/openapi.json` are disabled whenever auth is enabled.
 
 ---
+
+## Removing an install
+
+`serpent uninstall` lists what the install created, asks whether to keep `data/` and
+`.env`, removes the rest and verifies it (see the README). Keep them when you are only
+changing how Serpent is deployed.
 
 ## Moving an install
 

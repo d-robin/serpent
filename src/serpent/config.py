@@ -127,7 +127,7 @@ class Settings:
     db_path: str = str(ROOT / "data" / "serpent.db")
 
     # upstream
-    upstream_base_url: str = "https://google.serper.dev"
+    upstream_base_url: str = ""
     upstream_timeout: float = 30.0
     upstream_verify_tls: bool = True
     max_body_bytes: int = 1_048_576
@@ -198,7 +198,7 @@ def load_settings(env_file: Path | None = None) -> Settings:
         log_level=_env("LOG_LEVEL", "info").lower(),
         trust_proxy=_env_bool("TRUST_PROXY", False),
         db_path=_env("DB_PATH", str(ROOT / "data" / "serpent.db")),
-        upstream_base_url=_env("UPSTREAM_BASE_URL", "https://google.serper.dev").rstrip("/"),
+        upstream_base_url=_env("UPSTREAM_BASE_URL", "").rstrip("/"),
         upstream_timeout=_env_float("UPSTREAM_TIMEOUT", 30.0),
         upstream_verify_tls=_env_bool("UPSTREAM_VERIFY_TLS", True),
         max_body_bytes=_env_int("MAX_BODY_BYTES", 1_048_576),

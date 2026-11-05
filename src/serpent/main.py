@@ -116,9 +116,9 @@ def create_app(
         )
         app.state.started = datetime.now(timezone.utc)
         log.info(
-            "serpent %s ready: upstream=%s strategy=%s accounts=%s",
+            "serpent %s ready: providers=%s strategy=%s accounts=%s",
             __version__,
-            settings.upstream_base_url,
+            len(await _db(providers.list_providers)) or "none yet",
             settings.strategy,
             (await _db(accounts.count_by_status)),
         )
@@ -185,7 +185,7 @@ def create_app(
             {
                 "version": __version__,
                 "now": db.now_iso(),
-                "upstream": settings.upstream_base_url,
+                "upstream": providers.primary_upstream(),
                 "auth_style": settings.auth_style,
                 "strategy": settings.strategy,
                 "max_retries": settings.max_retries,
@@ -463,10 +463,12 @@ def create_app(
         """Non-charging liveness of the upstream host (no account credit used)."""
         security.require(request, "admin")
         started = time.perf_counter()
+        url = await _db(providers.primary_upstream)
+        if not url:
+            return {"reachable": False, "status": None, "latency_ms": 0.0, "url": "",
+                    "detail": "no provider configured yet"}
         try:
-            resp = await app.state.client.get(
-                settings.upstream_base_url + "/", timeout=5.0
-            )
+            resp = await app.state.client.get(url + "/", timeout=5.0)
             reachable = True
             status = resp.status_code
         except httpx.HTTPError as exc:
@@ -477,14 +479,14 @@ def create_app(
             "reachable": reachable,
             "status": status,
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
-            "url": settings.upstream_base_url,
+            "url": url,
         }
 
     @app.get("/admin/config")
     async def admin_config(request: Request):
         security.require(request, "admin")
         return {
-            "upstream_base_url": settings.upstream_base_url,
+            "upstream_base_url": await _db(providers.primary_upstream),
             "route_prefix": prefix,
             "auth_style": settings.auth_style,
             "auth_header_name": settings.auth_header_name
@@ -687,6 +689,9 @@ def create_app(
         try:
             chain = await _db(_route_providers, route_slug)
         except providers.NotFound as exc:
+            if route is None and not await _db(providers.list_providers):
+                return _json(503, "no provider configured yet - open /ui (Snake Charmer) "
+                                  "or run `serpent providers add` to add one")
             return _json(404, str(exc))
         if not chain:
             return _json(503, f"route {route_slug!r} has no enabled providers")

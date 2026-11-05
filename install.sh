@@ -9,9 +9,11 @@ if ! command -v "$PYTHON" >/dev/null 2>&1; then
   exit 1
 fi
 
+VENV_CREATED=0
 if [ ! -d .venv ]; then
   echo "==> creating virtualenv"
   "$PYTHON" -m venv .venv
+  VENV_CREATED=1
 fi
 
 echo "==> installing serpent"
@@ -19,10 +21,11 @@ echo "==> installing serpent"
 .venv/bin/pip install -q -e .
 
 echo "==> initialising $(pwd -P)"
-SERPENT_HOME="$(pwd -P)" .venv/bin/serpent init
+SERPENT_VENV_CREATED="$VENV_CREATED" SERPENT_HOME="$(pwd -P)" .venv/bin/serpent init
 
 chmod +x ctl.sh install.sh 2>/dev/null || true
 echo
 echo "==> starting Serpent"
 SERPENT_HOME="$(pwd -P)" .venv/bin/serpent up
 echo "    later:     .venv/bin/serpent up | status | stop     (serpent --help for the rest)"
+echo "    remove:    .venv/bin/serpent uninstall     (asks whether to keep your data)"

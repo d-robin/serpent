@@ -83,8 +83,14 @@ def add_account(
     label = (label or "").strip() or f"account-{_now().strftime('%H%M%S')}"
     conn = db.connection()
     if provider_id is None:
-        row = conn.execute("SELECT id FROM providers WHERE slug = 'default'").fetchone()
-        provider_id = int(row["id"]) if row else None
+        rows = conn.execute("SELECT id, slug FROM providers ORDER BY id").fetchall()
+        row = next((r for r in rows if r["slug"] == "default"), rows[0] if len(rows) == 1 else None)
+        if row is None:
+            raise AccountError(
+                "choose a provider for this account" if rows
+                else "add a provider first (Snake Charmer > Providers, or `serpent providers add`)"
+            )
+        provider_id = int(row["id"])
     elif conn.execute("SELECT 1 FROM providers WHERE id = ?", (provider_id,)).fetchone() is None:
         raise NotFound(f"provider {provider_id} not found")
     try:

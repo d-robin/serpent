@@ -6,8 +6,8 @@
   const hasTraffic = $derived(s.requests_ok > 0);
   const origin = location.origin;
   const steps = $derived([
-    { done: s.providers.length > 1 || hasAccounts, title: 'Choose a provider', href: '#/providers',
-      text: 'Serper is preconfigured as “default”. Add Serper, SerpApi, ScrapingDog, VALUE SERP or Brave from a preset, or enter your own.' },
+    { done: s.providers.length > 0, title: 'Choose a provider', href: '#/providers',
+      text: 'None is built in. Pick your search API from the presets (Serper, SerpApi, ScrapingDog, VALUE SERP, Brave) or enter its URL.' },
     { done: hasAccounts, title: 'Add your API keys', href: '#/accounts',
       text: 'Paste one or more provider keys. Serpent shares the credits across them and never shows a key again.' },
     { done: hasTraffic, title: 'Send a test search', href: '#/try',

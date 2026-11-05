@@ -16,7 +16,14 @@ All notable changes to this project are documented here. The format follows
 - Responsible-use guidance (`docs/responsible-use.md`) with warnings in Snake Charmer
   and the CLI when several accounts share a provider.
 
+- `serpent uninstall`: inventories the install, asks whether to keep your data, removes
+  what the installer created and verifies the result (`--dry-run`, `--yes`, `--keep-data`,
+  `--delete-data`). `install.sh` records what it created.
+
 ### Changed
+- No provider is preconfigured any more. A fresh install starts empty; the first provider
+  you add becomes the default route, and `/v1/*` answers 503 with instructions until then.
+  `UPSTREAM_BASE_URL` still works to adopt an older single-upstream setup.
 - Project renamed from "SERP Router" to Serpent; Python package is `serpent`
   (`serpent-router` on PyPI); Prometheus metrics are prefixed `serpent_`.
 

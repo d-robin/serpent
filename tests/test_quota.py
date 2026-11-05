@@ -7,12 +7,13 @@ from datetime import datetime, timezone
 
 import pytest
 
-from serpent import accounts, db, quota
+from serpent import accounts, db, providers, quota
 
 
 @pytest.fixture(autouse=True)
 def fresh_db(tmp_path):
     db.init_db(tmp_path / "quota.db")
+    providers.add_provider("test", base_url="https://upstream.test")
     yield
 
 

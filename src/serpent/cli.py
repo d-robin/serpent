@@ -888,8 +888,9 @@ def run_verify(home: Home | None, quiet: bool = False) -> int:
             "DEFAULT_QUOTA_LIMIT": "250", "BIND_HOST": "127.0.0.1", "BIND_PORT": str(port),
             "DASHBOARD_PUBLIC": "true",
         })
-        for k in ("UPSTREAM_BASE_URL", "CACHE_TTL_SECONDS", "RATE_LIMIT_PER_MINUTE"):
+        for k in ("CACHE_TTL_SECONDS", "RATE_LIMIT_PER_MINUTE"):
             env.pop(k, None)
+        env["UPSTREAM_BASE_URL"] = "http://127.0.0.1:9"  # placeholder; verify never forwards
         # Import in a child so this process never picks up the cwd's .env.
         imp = subprocess.run([sys.executable, "-c", "import serpent.main"], capture_output=True,
                              text=True, cwd=tmp, env=env)
@@ -988,9 +989,10 @@ ROUTER_KEYS={keys}
 ROUTER_KEY_HEADER=X-Router-Key
 DASHBOARD_PUBLIC=true
 
-# Default upstream used by the built-in 'default' provider.  Prefer adding providers
-# with `serpent providers add --preset serper` (or from the Snake Charmer UI).
-# UPSTREAM_BASE_URL=https://google.serper.dev
+# No provider is built in: add yours in Snake Charmer (Providers) or with
+# `serpent providers presets` / `serpent providers add`.  Only set the next lines to
+# adopt an older single-upstream setup as a provider named 'default'.
+# UPSTREAM_BASE_URL=
 # AUTH_STYLE=header
 # AUTH_HEADER_NAME=X-API-KEY
 # BIND_PORT=8971
@@ -1022,7 +1024,7 @@ def next_steps(url: str, *, key: str | None) -> str:
     return (
         "\n  Next: set it up in Snake Charmer (the web UI)\n"
         f"    1. open   {link}\n"
-        "    2. Providers: pick your provider (Serper is preconfigured), or add another\n"
+        "    2. Providers: choose your search API from the presets, or enter its URL\n"
         "    3. Accounts:  paste your provider API key(s)\n"
         "    4. Try it:    send a test search\n"
         "    5. Use it:    point your app at "
@@ -1064,11 +1066,13 @@ def cmd_init(home: Home, args: argparse.Namespace) -> int:
         write_private(home.env_file, ENV_TEMPLATE.format(
             keys=",".join(f"{k}:{role}" for role, k in keys.items())))
     boot(home)
+    from .uninstall import record_install
+    record_install(home)
     if args.json:
         say(json.dumps({"home": str(home.root), "created_env": created, "keys": keys}, indent=2))
         return 0
     say(f"home      {home.root}")
-    say("database  ready (default provider created)")
+    say("database  ready (no provider yet: you add yours in Snake Charmer)")
     if created:
         say(f"config    wrote {home.env_file} (mode 600)\n")
         for role, key in keys.items():
@@ -1368,6 +1372,11 @@ def cmd_systemd(home: Home, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_uninstall(home: Home, args: argparse.Namespace) -> int:
+    from .uninstall import cmd_uninstall as run
+    return run(home, args)
+
+
 # ------------------------------------------------------------------- move ---
 
 REMOTE_PATH = re.compile(r"^[A-Za-z0-9._/@~+-]+$")
@@ -1621,7 +1630,7 @@ def _health_ns(**kw):
 
 def menu_add_account(home: Home) -> None:
     label = _ask("label (e.g. serper-1): ")
-    slug = _ask("provider slug [default]: ") or "default"
+    slug = _ask("provider slug (see: serpent providers list): ")
     key = getpass.getpass("provider api key (hidden): ").strip()
     limit = _ask("credits per period [default]: ")
     if not key:
@@ -1818,6 +1827,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("-n", type=int, default=20)
     sp.add_argument("--json", action="store_true")
     add("seed", cmd_seed, "import SERP_ACCOUNTS from the environment")
+    sp = add("uninstall", cmd_uninstall, "stop Serpent and remove what the install created (asks about your data)")
+    sp.add_argument("--keep-data", action="store_true", help="keep data/ and .env (the default with --yes)")
+    sp.add_argument("--delete-data", action="store_true", help="also delete the database and .env")
+    sp.add_argument("--yes", "-y", action="store_true", help="do not ask questions")
+    sp.add_argument("--dry-run", action="store_true", help="show what would happen and change nothing")
+
     sp = add("systemd", cmd_systemd, "print a systemd unit with this machine's real paths")
     serve_opts(sp)
     sp.add_argument("--user")

@@ -185,6 +185,8 @@ def add_provider(
             pid = int(cur.lastrowid)
     except sqlite3.IntegrityError as exc:
         raise Conflict(f"slug {slug!r} is already used") from exc
+    if not route_exists(get_default_route()):
+        db.set_state("default_route", slug)  # the first provider becomes /v1/*
     return get_provider(pid)
 
 
@@ -220,11 +222,16 @@ def delete_provider(ref: int | str) -> None:
         conn.execute("DELETE FROM providers WHERE id = ?", (prov.id,))
 
 
-def ensure_default(settings: Settings) -> Provider:
-    """Create the 'default' provider from env settings and adopt orphan accounts."""
+def ensure_default(settings: Settings) -> Provider | None:
+    """Adopt a legacy single-upstream setup as the 'default' provider.
+
+    A fresh install has no providers: you add one from Snake Charmer or the CLI.
+    Only when ``UPSTREAM_BASE_URL`` is set explicitly (an older .env or a Docker
+    run) is a 'default' provider created from it, and orphan accounts adopted.
+    """
     with db.write_tx() as conn:
         row = conn.execute("SELECT * FROM providers WHERE slug = 'default'").fetchone()
-        if row is None:
+        if row is None and settings.upstream_base_url:
             conn.execute(
                 """INSERT INTO providers (slug, name, preset, base_url, auth_style,
                        auth_header_name, auth_param_name, enabled, created_at)
@@ -233,6 +240,8 @@ def ensure_default(settings: Settings) -> Provider:
                  settings.auth_header_name, settings.auth_param_name, db.now_iso()),
             )
             row = conn.execute("SELECT * FROM providers WHERE slug = 'default'").fetchone()
+        if row is None:
+            return None
         conn.execute("UPDATE accounts SET provider_id = ? WHERE provider_id IS NULL", (row["id"],))
     return _provider(row)
 
@@ -351,6 +360,15 @@ def resolve(slug: str) -> list[Provider]:
         if prow is not None and prow["enabled"]:
             out.append(_provider(prow))
     return out
+
+
+def primary_upstream() -> str:
+    """Base URL of the first enabled provider on the default route, or '' if none."""
+    try:
+        chain = resolve(get_default_route())
+    except NotFound:
+        return ""
+    return chain[0].base_url if chain else ""
 
 
 def route_exists(slug: str) -> bool:
