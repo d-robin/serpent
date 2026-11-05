@@ -95,6 +95,26 @@ install twice does not launch a second copy: it says so and prints that install'
 pid, folder and log. Start Serpent from another folder and it takes the next free port,
 telling you who holds the one it skipped. Stopping and restarting never swaps ports.
 
+## Terminal UI and recovering keys
+
+```bash
+.venv/bin/serpent            # in a terminal: opens the full-screen UI (same as `serpent tui`)
+```
+
+Move with the arrow keys (or `j`/`k`), `Enter` or `→` to open, `←`/`Esc`/`q` to go back,
+`?` for help. Screens: Overview (start/stop/health), Providers, Accounts, Chains &
+routing, Keys & sign-in, Requests, Logs. It changes the same data as Snake Charmer. It
+needs `curses` (macOS, Linux, Raspberry Pi; not Windows).
+
+Lost a key? Router keys are in `.env`, provider keys in the database. You can read them back:
+
+```bash
+serpent keys                 # masked list of every key
+serpent keys --reveal        # full values (asks first in a terminal)
+serpent keys link            # Snake Charmer URL that signs you in as admin
+serpent keys rotate admin    # make a new router key (admin, client or read), then restart
+```
+
 ## After a reboot
 
 `./install.sh` and `serpent up` start Serpent as a background process. It **does not

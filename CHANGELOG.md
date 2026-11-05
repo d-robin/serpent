@@ -20,6 +20,11 @@ All notable changes to this project are documented here. The format follows
   what the installer created and verifies the result (`--dry-run`, `--yes`, `--keep-data`,
   `--delete-data`). `install.sh` records what it created.
 
+- `serpent tui`: full-screen terminal UI with arrow-key navigation for providers, accounts,
+  chains, keys, requests, logs and server control; opens when you run `serpent` in a terminal.
+- `serpent keys`: show or recover router keys (from `.env`) and provider keys (from the
+  database), print the signed-in Snake Charmer link, and rotate a router key.
+
 ### Changed
 - The database (which holds provider API keys) and its -wal/-shm files, and `data/`, are
   now created owner-only (0600/0700); existing installs are tightened on the next start.

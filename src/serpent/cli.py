@@ -1430,6 +1430,62 @@ def cmd_systemd(home: Home, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_keys(home: Home, args: argparse.Namespace) -> int:
+    """Recover keys: router keys come from .env, provider keys from the database."""
+    from . import keys
+
+    action = args.action
+    if action == "link":
+        link = keys.signin_link(home)
+        if not link:
+            raise CliError(f"no admin key in {home.env_file}; make one with: serpent keys rotate admin")
+        if not is_running(home):
+            eprint("note: Serpent is not running; start it with: serpent up")
+        say(link)
+        return 0
+    if action == "rotate":
+        if args.role not in keys.ROLES:
+            raise CliError(f"say which key: serpent keys rotate {{{'|'.join(keys.ROLES)}}}")
+        if sys.stdin.isatty() and not args.yes and _ask(
+                f"Replace the {args.role} key? Anything using the old one stops working. [y/N] "
+        ).lower() not in ("y", "yes"):
+            say("cancelled")
+            return 1
+        new = keys.rotate_router_key(home, args.role)
+        say(f"new {args.role} key: {new}")
+        say("restart to apply:  serpent restart" if is_running(home) else "applies on the next start")
+        return 0
+
+    boot(home)
+    router = keys.router_keys(home)
+    accts = keys.account_keys()
+    if args.reveal and sys.stdin.isatty() and not args.yes and _ask(
+            "This prints secrets to the terminal. Continue? [y/N] ").lower() not in ("y", "yes"):
+        say("cancelled")
+        return 1
+    show = (lambda k: k) if args.reveal else keys.mask
+    if args.json:
+        say(json.dumps({"router": [{"role": r, "key": show(k)} for r, k in router],
+                        "accounts": [{**a, "key": show(a["key"])} for a in accts]}, indent=2))
+        return 0
+    if not router:
+        say(f"no router keys in {home.env_file} (auth is off, or .env is missing)\n")
+    else:
+        say("Router keys (.env)")
+        say(table([(r, show(k)) for r, k in router], ["role", "key"]))
+    say("\nProvider keys (database)")
+    say(table([(a["id"], a["label"], a["provider"] or "-", show(a["key"])) for a in accts],
+              ["#", "label", "provider", "key"]) if accts else "no accounts yet")
+    if not args.reveal:
+        say("\nshow full values: serpent keys --reveal    sign-in link: serpent keys link")
+    return 0
+
+
+def cmd_tui(home: Home, args: argparse.Namespace | None = None) -> int:
+    from . import tui
+    return tui.run(home)
+
+
 def cmd_uninstall(home: Home, args: argparse.Namespace) -> int:
     from .uninstall import cmd_uninstall as run
     return run(home, args)
@@ -1885,6 +1941,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("-n", type=int, default=20)
     sp.add_argument("--json", action="store_true")
     add("seed", cmd_seed, "import SERP_ACCOUNTS from the environment")
+    add("tui", cmd_tui, "full-screen terminal UI: arrow keys to move, Enter to open (also the default in a terminal)")
+    sp = add("keys", cmd_keys, "show or recover keys (router keys from .env, provider keys from the database)")
+    sp.add_argument("action", nargs="?", default="show", choices=["show", "link", "rotate"],
+                    help="show (default) | link (signed-in Snake Charmer URL) | rotate (new router key)")
+    sp.add_argument("role", nargs="?", help="with rotate: admin, client or read")
+    sp.add_argument("--reveal", action="store_true", help="print full key values instead of masked ones")
+    sp.add_argument("--json", action="store_true")
+    sp.add_argument("--yes", "-y", action="store_true", help="do not ask for confirmation")
     sp = add("uninstall", cmd_uninstall, "stop Serpent and remove what the install created (asks about your data)")
     sp.add_argument("--keep-data", action="store_true", help="keep data/ and .env (the default with --yes)")
     sp.add_argument("--delete-data", action="store_true", help="also delete the database and .env")
@@ -1913,7 +1977,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if not getattr(args, "func", None):
             if sys.stdin.isatty() and sys.stdout.isatty():
-                return cmd_menu(home)
+                try:
+                    return cmd_tui(home)
+                except CliError:
+                    return cmd_menu(home)  # no usable curses: fall back to the numbered menu
             parser.print_help()
             return 0
         return int(args.func(home, args) or 0)
