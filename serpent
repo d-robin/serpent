@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# serpent - the one entry point.  From a clone:
+#
+#   ./serpent              first run: set up, start, open the web UI. Afterwards: terminal UI
+#   ./serpent --help       every command
+#   ./serpent up           start (or resume) and open Snake Charmer in the browser
+#   ./serpent keys         show or recover keys
+#   ./serpent uninstall    remove what the install created (asks about your data)
+#   ./serpent dev          router + Vite hot reload for working on the UI (needs Node)
+#
+# Anything else is passed to the `serpent` command inside .venv. You can symlink this file
+# onto your PATH (ln -s "$PWD/serpent" ~/.local/bin/serpent) and use it from anywhere.
+set -euo pipefail
+
+# Resolve the real location even when invoked through a symlink.
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+  dir="$(cd "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ "$src" != /* ]] && src="$dir/$src"
+done
+HERE="$(cd "$(dirname "$src")" && pwd -P)"
+cd "$HERE"
+export SERPENT_HOME="${SERPENT_HOME:-$HERE}"
+BIN=".venv/bin/serpent"
+
+say() { printf '%s\n' "$*"; }
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+# ---- commands that need nothing installed: help and version, from the source tree ----
+case "${1:-}" in
+  -h|--help|help|version)
+    [ "${1}" = "help" ] && shift && set -- --help "$@"
+    if [ -x "$BIN" ]; then exec "$BIN" "$@"; fi
+    PYTHONPATH="$HERE/src" exec "${PYTHON:-python3}" -m serpent "$@"
+    ;;
+esac
+
+# ---- first-time setup: virtualenv, install, init -------------------------------------
+setup() {
+  PYTHON="${PYTHON:-python3}"
+  command -v "$PYTHON" >/dev/null 2>&1 \
+    || die "python3 not found (Raspberry Pi OS: sudo apt install -y python3 python3-venv)"
+  "$PYTHON" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' \
+    || die "Python 3.10 or newer is needed (found $("$PYTHON" -V 2>&1))"
+  created=0
+  if [ ! -d .venv ]; then
+    say "==> creating virtualenv"
+    "$PYTHON" -m venv .venv || die "could not create .venv (Debian/Ubuntu: sudo apt install python3-venv)"
+    created=1
+  fi
+  say "==> installing Serpent"
+  .venv/bin/pip install -q --upgrade pip
+  .venv/bin/pip install -q -e . || die "pip install failed; see the messages above"
+  say "==> initialising $HERE"
+  SERPENT_VENV_CREATED="$created" "$BIN" init
+}
+
+# ---- developer mode: router + Vite hot reload ----------------------------------------
+dev() {
+  [ -x "$BIN" ] || setup
+  command -v npm >/dev/null 2>&1 || die "Node.js is needed for UI development (the built UI is already included)"
+  in_use() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1 || nc -z 127.0.0.1 "$1" >/dev/null 2>&1; }
+  free() { local p="$1"; while in_use "$p"; do p=$((p + 1)); done; echo "$p"; }
+  host="${SERPENT_HOST:-127.0.0.1}"
+  port="$(free "${SERPENT_PORT:-8971}")"
+  vite_port="$(free 5173)"
+  [ -d ui/node_modules ] || (cd ui && npm ci)
+  say "router   http://$host:$port"
+  say "UI (dev) http://127.0.0.1:$vite_port/ui/"
+  BIND_HOST="$host" BIND_PORT="$port" .venv/bin/uvicorn serpent.main:app --host "$host" --port "$port" --no-access-log &
+  router=$!
+  trap 'kill "$router" 2>/dev/null || true' EXIT INT TERM
+  cd ui && SERPENT_API="http://$host:$port" npx vite --port "$vite_port" --strictPort
+}
+
+case "${1:-}" in
+  dev) shift; dev "$@"; exit $? ;;
+  install) [ -x "$BIN" ] || setup; say "Installed. Next: ./serpent"; exit 0 ;;
+esac
+
+if [ ! -x "$BIN" ]; then
+  # `uninstall` on a tree that was never installed has nothing to set up first.
+  if [ "${1:-}" = "uninstall" ]; then
+    PYTHONPATH="$HERE/src" exec "${PYTHON:-python3}" -m serpent "$@"
+  fi
+  setup
+  say
+  # first run with no arguments: start it and open the web UI
+  [ $# -eq 0 ] && set -- up
+fi
+
+exec "$BIN" "$@"

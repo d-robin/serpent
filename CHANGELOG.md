@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- One entry point, `./serpent`: the first run sets up, starts and opens the web UI;
+  afterwards it opens the terminal UI. It also serves `--help` before anything is installed,
+  and `./serpent dev` for UI work. Replaces `install.sh`, `ctl.sh` and `serve.sh`.
 - Providers and fallback chains: accounts belong to a provider, `/p/{slug}/*`
   routes to a provider or chain, `/v1/*` follows the configurable default route.
 - Provider presets: Serper, SerpApi, ScrapingDog, VALUE SERP, Brave Search.
@@ -18,7 +21,7 @@ All notable changes to this project are documented here. The format follows
 
 - `serpent uninstall`: inventories the install, asks whether to keep your data, removes
   what the installer created and verifies the result (`--dry-run`, `--yes`, `--keep-data`,
-  `--delete-data`). `install.sh` records what it created.
+  `--delete-data`). The installer records what it created.
 
 - `serpent tui`: full-screen terminal UI with arrow-key navigation for providers, accounts,
   chains, keys, requests, logs and server control; opens when you run `serpent` in a terminal.

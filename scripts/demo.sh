@@ -15,7 +15,7 @@ DB=data/demo.db
 PORT="${DEMO_PORT:-8980}"
 UPSTREAM_PORT="${FAKE_UPSTREAM_PORT:-9911}"
 
-[ -x "$PY" ] || { echo "run ./install.sh first" >&2; exit 1; }
+[ -x "$PY" ] || { echo "run ./serpent install first" >&2; exit 1; }
 mkdir -p data
 rm -f "$DB" "$DB-wal" "$DB-shm"
 
@@ -104,4 +104,4 @@ DB_PATH="$DB" \
 UPSTREAM_BASE_URL="http://127.0.0.1:$UPSTREAM_PORT" \
 ROUTER_KEYS= \
 SERPENT_PORT="$PORT" \
-"$(pwd)/serve.sh"
+exec .venv/bin/uvicorn serpent.main:app --host 127.0.0.1 --port "$PORT" --no-access-log

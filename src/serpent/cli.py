@@ -253,9 +253,9 @@ _DIAGNOSES: list[tuple[str, str, str]] = [
     (r"No space left on device", "the disk is full",
      "free space (df -h) or move DB_PATH to another volume"),
     (r"No module named", "a python package is missing from the environment",
-     "reinstall: pip install -e . (or ./install.sh)"),
+     "reinstall: ./serpent install (or pip install -e .)"),
     (r"ModuleNotFoundError|ImportError", "an import failed at startup",
-     "reinstall with ./install.sh; if it persists, read the traceback in logs/router.log"),
+     "reinstall with ./serpent install; if it persists, read the traceback in logs/router.log"),
     (r"SyntaxError|IndentationError", "a source file did not compile",
      "a recent edit broke the syntax - see the traceback"),
     (r"unable to open database|attempt to write a readonly database|database is locked"
@@ -1496,7 +1496,7 @@ def cmd_uninstall(home: Home, args: argparse.Namespace) -> int:
 REMOTE_PATH = re.compile(r"^[A-Za-z0-9._/@~+-]+$")
 CODE_ITEMS = ("src", "tests", "scripts", "deploy", "docs", "branding", "ui", "pyproject.toml",
               "requirements.txt", "README.md", "LICENSE", "NOTICE", "CHANGELOG.md", ".env.example",
-              "install.sh", "ctl.sh", "Dockerfile")
+              "serpent", "Dockerfile")
 SKIP_DIRS = {".venv", "__pycache__", ".pytest_cache", ".git", "node_modules", ".ruff_cache", ".mypy_cache"}
 
 
@@ -1588,14 +1588,14 @@ def install_and_verify(plan: MovePlan, dest: Path | None, verify: bool) -> bool:
     """Run the destination's own installer, then `serpent verify` there."""
     checkout = plan.src.joinpath("pyproject.toml").exists()
     if plan.remote:
-        inner = "bash ./install.sh" if checkout else "true"
+        inner = "./serpent install" if checkout else "true"
         if verify:
             inner += (" && .venv/bin/serpent verify" if checkout
                       else " && SERPENT_HOME=. serpent verify")
         return _run_step(["ssh", "-o", "BatchMode=yes", "-t", plan.remote, f"cd '{plan.dest}' && {inner}"])
     assert dest is not None
     env = {**os.environ, "SERPENT_HOME": str(dest)}
-    if checkout and not _run_step(["bash", str(dest / "install.sh")], cwd=dest, env=env):
+    if checkout and not _run_step([str(dest / "serpent"), "install"], cwd=dest, env=env):
         return False
     if not verify:
         return True
@@ -1812,7 +1812,15 @@ def cmd_menu(home: Home) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="serpent",
-        description="Serpent - quota-aware gateway for SERP APIs. Run with no arguments for a menu.")
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Serpent - quota-aware gateway for SERP APIs.\n"
+                    "Run with no arguments in a terminal to open the terminal UI.",
+        epilog="start here:\n"
+               "  ./serpent              first run: set up, start, open the web UI; then: terminal UI\n"
+               "  ./serpent up           start (or resume) and open Snake Charmer in the browser\n"
+               "  ./serpent keys         show or recover your keys\n"
+               "  ./serpent uninstall    remove what the install created (asks about your data)\n"
+               "\nUse `<command> --help` for the options of one command.")
     p.add_argument("--home", help="state directory (default: $SERPENT_HOME or the current directory)")
     sub = p.add_subparsers(dest="command", metavar="command")
 

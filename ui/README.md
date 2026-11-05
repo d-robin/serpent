@@ -17,7 +17,7 @@ npm run build      # writes ../src/serpent/ui_dist (git-ignored, shipped in the 
 ## Develop
 
 ```bash
-./serve.sh --dev   # from the repo root: router on a free port + Vite with hot reload
+./serpent dev   # from the repo root: router on a free port + Vite with hot reload
 ```
 
 or run the router yourself and point Vite at it:

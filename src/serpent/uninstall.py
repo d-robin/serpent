@@ -60,7 +60,7 @@ def read_manifest(home: Home) -> dict:
 def record_install(home: Home) -> None:
     """Note what the installer created, so uninstall removes exactly that.
 
-    ``install.sh`` sets ``SERPENT_VENV_CREATED=1`` when it made ``.venv`` itself; a
+    ``./serpent install`` sets ``SERPENT_VENV_CREATED=1`` when it made ``.venv`` itself; a
     virtualenv that was already there is never claimed.
     """
     data = read_manifest(home)
@@ -185,7 +185,7 @@ def scan(home: Home) -> Inventory:
 
     venv = root / ".venv"
     if venv.is_dir() and (manifest.get("venv_created") or (venv / "bin" / "serpent").exists()):
-        note = "" if manifest.get("venv_created") else "created by install.sh (no manifest found)"
+        note = "" if manifest.get("venv_created") else "created by ./serpent install (no manifest found)"
         add("venv", "virtualenv with Serpent installed", ".venv", "install", note)
 
     if SYSTEM_UNIT.exists():

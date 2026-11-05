@@ -13,7 +13,7 @@ cd ui && npm ci && npm test && npm run build
 ## Ground rules
 
 - **Commit the built UI.** `src/serpent/ui_dist/` is checked in so a plain `git clone` plus
-  `./install.sh` works without Node. After changing anything in `ui/`, run
+  `./serpent` works without Node. After changing anything in `ui/`, run
   `npm run build` and commit the result; CI fails if it is stale.
 - **Tests with behaviour changes.** The suite never touches the network; inject an
   `httpx.MockTransport` (see `tests/conftest.py`).

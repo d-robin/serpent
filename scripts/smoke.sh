@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PY=.venv/bin/python
-[ -x "$PY" ] || { echo "run ./install.sh first" >&2; exit 1; }
+[ -x "$PY" ] || { echo "run ./serpent install first" >&2; exit 1; }
 
 WORK="$(mktemp -d)"
 DB="$WORK/smoke.db"

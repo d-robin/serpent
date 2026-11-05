@@ -5,7 +5,7 @@
 ### systemd (recommended)
 
 ```bash
-./install.sh
+./serpent install
 .venv/bin/serpent stop        # systemd will run it instead
 .venv/bin/serpent systemd --out serpent.service
 sudo cp serpent.service /etc/systemd/system/serpent.service
@@ -71,7 +71,7 @@ stop the service first.
 
 - Provider keys live in the SQLite file and are **never** returned by any
   endpoint or the dashboard; only a `****last4` hint is exposed. Keep `.env` at
-  mode 600 (install.sh does) and the data directory off any sync folder.
+  mode 600 (`serpent init` does) and the data directory off any sync folder.
 - If `ROUTER_KEYS` is empty the router logs a warning at startup and accepts
   everything. That is fine on a trusted LAN, unacceptable on the internet.
 - TLS is not handled here. Put nginx/Caddy in front for HTTPS and set
