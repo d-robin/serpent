@@ -7,11 +7,12 @@
   import Accounts from './pages/Accounts.svelte';
   import Chains from './pages/Chains.svelte';
   import Settings from './pages/Settings.svelte';
+  import Requests from './pages/Requests.svelte';
   import Search from './pages/Search.svelte';
   import TryIt from './pages/TryIt.svelte';
 
   const tabs = [
-    ['overview', 'Overview'], ['search', 'Search'], ['providers', 'Providers'], ['accounts', 'Accounts'],
+    ['overview', 'Overview'], ['search', 'Search'], ['requests', 'Requests'], ['providers', 'Providers'], ['accounts', 'Accounts'],
     ['chains', 'Chains'], ['settings', 'Settings'], ['try', 'Raw request'],
   ] as const;
 
@@ -107,6 +108,7 @@
       {:else if route === 'chains'}<Chains />
       {:else if route === 'settings'}<Settings />
       {:else if route === 'search'}<Search />
+      {:else if route === 'requests'}<Requests />
       {:else if route === 'try'}<TryIt />
       {:else}<Overview />{/if}
     </main>

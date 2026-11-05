@@ -8,9 +8,10 @@
     ...s.providers.map((p) => ({ value: `/p/${p.slug}/`, label: `/p/${p.slug}/…` })),
     ...s.chains.map((c) => ({ value: `/p/${c.slug}/`, label: `/p/${c.slug}/… (chain)` })),
   ]);
-  let base = $state('/v1/');
-  let method = $state('POST');
-  let tail = $state('search');
+  // SerpApi is GET with the query in the URL (read once: these are only starting values).
+  const getStyle = store.status?.providers.find((p) => p.slug === store.status?.default_route)?.preset === 'serpapi';  let base = $state('/v1/');
+  let method = $state(getStyle ? 'GET' : 'POST');
+  let tail = $state(getStyle ? 'search?engine=google&q=coffee+shops+austin' : 'search');
   let key = $state('');
   let body = $state('{"q":"coffee shops austin","num":3}');
   let busy = $state(false);
@@ -29,7 +30,7 @@
     try {
       const res = await fetch(url, {
         method,
-        headers: { ...authHeaders(key), ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}) },
+        headers: { ...authHeaders(key || undefined), ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}) },
         body: method === 'GET' ? undefined : body,
       });
       const text = await res.text();

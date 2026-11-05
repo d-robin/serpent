@@ -23,6 +23,7 @@ from . import (
     dashboard,
     db,
     metrics,
+    provider_usage,
     providers,
     quota,
     requestlog,
@@ -369,6 +370,24 @@ def create_app(
         return {"period": period, "accounts": rows}
 
     # ---- admin API -------------------------------------------------------
+    @app.get("/admin/requests")
+    async def admin_requests(
+        request: Request,
+        limit: int = 50,
+        offset: int = 0,
+        outcome: str = "",
+        provider: str = "",
+        q: str = "",
+    ):
+        security.require(request, "read")
+        page = await _db(
+            lambda: requestlog.search(
+                limit=limit, offset=offset, outcome=outcome, provider=provider, text=q[:100]
+            )
+        )
+        return {**page, "limit": max(1, min(limit, 200)), "offset": max(0, offset),
+                "kept": settings.request_log_size}
+
     @app.get("/admin/accounts")
     async def admin_list(request: Request):
         security.require(request, "admin")
@@ -406,6 +425,28 @@ def create_app(
             return _json(400, str(exc))
         log.info("account added id=%s label=%s", account["id"], account["label"])
         return account
+
+    @app.get("/admin/accounts/{account_id}/provider-usage")
+    async def admin_provider_usage(account_id: int, request: Request):
+        """What the provider says this key's plan allows (free call, not counted by Serpent)."""
+        security.require(request, "admin")
+
+        def lookup():
+            row = db.connection().execute(
+                "SELECT api_key, provider_id FROM accounts WHERE id = ?", (account_id,)
+            ).fetchone()
+            if row is None:
+                raise accounts.NotFound(f"account {account_id} not found")
+            provider = providers.get_provider(row["provider_id"]) if row["provider_id"] else None
+            return row["api_key"], provider
+
+        try:
+            api_key, provider = await _db(lookup)
+        except accounts.NotFound as exc:
+            return _json(404, str(exc))
+        if provider is None:
+            return {"supported": False, "error": None, "note": "this account has no provider"}
+        return await provider_usage.fetch(app.state.client, provider, api_key)
 
     @app.patch("/admin/accounts/{account_id}")
     async def admin_update(account_id: int, request: Request):
@@ -721,7 +762,7 @@ def create_app(
                     account="cache",
                     client=client_id,
                     method=request.method,
-                    path=prefix + tail,
+                    path=requestlog.logged_path(prefix + tail, query_items),
                     status=hit.status_code,
                     latency_ms=0.0,
                     cached=True,
@@ -858,7 +899,7 @@ def create_app(
                             account=reservation.label,
                             client=client_id,
                             method=request.method,
-                            path=prefix + tail,
+                            path=requestlog.logged_path(prefix + tail, query_items),
                             status=response.status_code,
                             latency_ms=latency,
                             keep=settings.request_log_size,
@@ -931,7 +972,7 @@ def create_app(
                         account=reservation.label,
                         client=client_id,
                         method=request.method,
-                        path=prefix + tail,
+                        path=requestlog.logged_path(prefix + tail, query_items),
                         status=response.status_code,
                         latency_ms=latency,
                         error="client error passed through",
@@ -974,7 +1015,7 @@ def create_app(
                     account=None,
                     client=client_id,
                     method=request.method,
-                    path=prefix + tail,
+                    path=requestlog.logged_path(prefix + tail, query_items),
                     status=last_upstream.status_code,
                     latency_ms=total_latency,
                     error=last_error or "all accounts failed",
@@ -995,7 +1036,7 @@ def create_app(
                     account=None,
                     client=client_id,
                     method=request.method,
-                    path=prefix + tail,
+                    path=requestlog.logged_path(prefix + tail, query_items),
                     status=502,
                     latency_ms=total_latency,
                     error=last_error,
@@ -1023,7 +1064,7 @@ def create_app(
                 account=None,
                 client=client_id,
                 method=request.method,
-                path=prefix + tail,
+                path=requestlog.logged_path(prefix + tail, query_items),
                 status=429,
                 latency_ms=total_latency,
                 error="quota exhausted",

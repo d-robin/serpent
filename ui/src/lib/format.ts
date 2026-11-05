@@ -50,3 +50,9 @@ export function move<T>(list: T[], index: number, delta: number): T[] {
   [copy[index], copy[to]] = [copy[to], copy[index]];
   return copy;
 }
+
+/** Providers whose own usage numbers Serpent can fetch (mirrors provider_usage.py). */
+export function hasUsageLookup(p: { preset: string | null; base_url: string }): boolean {
+  if (p.preset === 'serpapi') return true;
+  try { return new URL(p.base_url).hostname.endsWith('serpapi.com'); } catch { return false; }
+}

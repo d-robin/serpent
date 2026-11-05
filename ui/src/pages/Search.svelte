@@ -1,6 +1,7 @@
 <script lang="ts">
   import { authHeaders } from '../lib/api';
   import { store } from '../lib/store.svelte';
+  import { KINDS, buildPath, type Kind } from '../lib/engines';
   import { extractHits, fillTemplate, host, type Hit } from '../lib/results';
 
   const s = $derived(store.status!);
@@ -19,6 +20,7 @@
   let method = $state<string>(saved.method ?? 'POST');
   let path = $state<string>(saved.path ?? 'search');
   let template = $state<string>(saved.template ?? '{"q":"{query}"}');
+  let kindId = $state<string>(saved.kindId ?? '');
   let key = $state('');
   let query = $state('');
   let busy = $state(false);
@@ -31,12 +33,17 @@
 
   $effect(() => { if (!key) key = store.key; });
   $effect(() => {
-    try { localStorage.setItem(SAVED, JSON.stringify({ base, method, path, template })); } catch { /* private mode */ }
+    try { localStorage.setItem(SAVED, JSON.stringify({ base, method, path, template, kindId })); } catch { /* private mode */ }
   });
 
+  // Which provider answers the chosen route, and what kinds of search it knows.
+  const slug = $derived(base === '/v1/' ? s.default_route : base.replace(/^\/p\/|\/$/g, ''));
+  const preset = $derived(s.providers.find((p) => p.slug === slug)?.preset ?? '');
+  const kinds = $derived<Kind[]>(KINDS[preset] ?? []);
+  const kind = $derived(kinds.find((k) => k.id === kindId) ?? kinds[0]);
   const noProvider = $derived(s.providers.length === 0);
   const noAccount = $derived(!noProvider && s.accounts_total === 0);
-  const needsKey = $derived(s.auth_enabled && !key);
+  const needsKey = $derived(s.auth_enabled && !key && store.role === "none");
 
   async function search(e: SubmitEvent) {
     e.preventDefault();
@@ -45,9 +52,12 @@
     busy = true; error = ''; hits = []; raw = ''; meta = null; searched = true;
     const t0 = performance.now();
     try {
-      let url = base + path.replace(/^\/+/, '');
-      const init: RequestInit = { method, headers: { ...authHeaders(key) } };
-      if (method === 'GET') {
+      const how = kind ? { method: kind.method, path: buildPath(kind, q) } : { method, path };
+      let url = base + how.path.replace(/^\/+/, '');
+      const init: RequestInit = { method: how.method, headers: { ...authHeaders(key || undefined) } };
+      if (kind) {
+        // fully described by the search type
+      } else if (method === 'GET') {
         url += (url.includes('?') ? '&' : '?') + 'q=' + encodeURIComponent(q);
       } else {
         init.headers = { ...init.headers, 'Content-Type': 'application/json' };
@@ -86,6 +96,15 @@
     <div class="banner warn">A provider is set up, but it has no API key yet. <a href="#/accounts">Add an account</a>.</div>
   {/if}
 
+  {#if kinds.length}
+    <div class="kinds" role="radiogroup" aria-label="Kind of search">
+      {#each kinds as k}
+        <button type="button" role="radio" aria-checked={kind?.id === k.id} class:on={kind?.id === k.id}
+                onclick={() => (kindId = k.id)}>{k.label}</button>
+      {/each}
+    </div>
+  {/if}
+
   <form class="searchbox" onsubmit={search} role="search">
     <input type="search" bind:value={query} placeholder="What do you want to look up?" aria-label="Search query"
            disabled={noProvider || noAccount} />
@@ -100,6 +119,9 @@
       <label class="field">Client key
         <input type="password" autocomplete="off" bind:value={key} placeholder={s.auth_enabled ? 'client or admin key' : 'not required'} />
       </label>
+      {#if kinds.length}
+        <p class="muted wide" style="margin:0">Request details are filled in for {preset}. Choose the kind of search above the box.</p>
+      {:else}
       <label class="field">Method<select bind:value={method}>{#each ['POST', 'GET'] as m}<option>{m}</option>{/each}</select></label>
       <label class="field">Path<input bind:value={path} placeholder="search" /></label>
       {#if method === 'POST'}
@@ -108,6 +130,7 @@
         </label>
       {:else}
         <p class="muted wide" style="margin:0">Your search is sent as <code>?q=…</code>.</p>
+      {/if}
       {/if}
       <p class="muted wide" style="margin:0">Providers differ in what they expect. Set this once to match yours; it is remembered in this browser.</p>
     </div>
@@ -126,6 +149,7 @@
       <article class="hit">
         <span class="muted host">{host(h.url)}</span>
         <a class="title" href={h.url} target="_blank" rel="noopener noreferrer">{h.title}</a>
+        {#if h.extra}<span class="extra">{h.extra}</span>{/if}
         {#if h.snippet}<p>{h.snippet}</p>{/if}
       </article>
     {/each}
@@ -147,6 +171,10 @@
   .searchbox { display: flex; gap: 8px; }
   .searchbox input { flex: 1; font-size: 17px; padding: 12px 14px; }
   .searchbox button { padding: 0 22px; }
+  .kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kinds button { border-radius: 999px; padding: 4px 14px; min-height: 30px; }
+  .kinds button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .hit .extra { display: block; font-weight: 600; margin-top: 2px; }
   .note { margin: 0; font-size: 13px; }
   .opts summary { cursor: pointer; }
   .opts .form { margin-top: 12px; }

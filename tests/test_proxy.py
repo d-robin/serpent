@@ -246,6 +246,6 @@ def test_recent_request_log_records_calls(make_client, settings):
     _add(client)
     client.get("/v1/search?q=logged", headers=CLIENT)
     recent = client.get("/api/status").json()["recent"]
-    assert recent[0]["path"] == "/v1/search"
+    assert recent[0]["path"] == "/v1/search?q=logged"
     assert recent[0]["status"] == 200
     assert recent[0]["account"] == "acct"

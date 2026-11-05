@@ -193,6 +193,8 @@ Mutations require an `admin` key.
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /admin/accounts` | Accounts with live quota |
+| `GET /admin/requests` | Paged call history: `limit`, `offset`, `outcome=ok\|failed`, `provider`, `q` (read key) |
+| `GET /admin/accounts/{id}/provider-usage` | What the provider says the key's plan allows (SerpApi only; free, not counted) |
 | `POST /admin/accounts` | `{"label","api_key","quota_limit","notes"}` |
 | `PATCH /admin/accounts/{id}` | `{"status":"active\|disabled","quota_limit","label","api_key","notes"}` |
 | `DELETE /admin/accounts/{id}` | Remove (also drops its usage rows) |

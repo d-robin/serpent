@@ -59,7 +59,7 @@
 {/if}
 
 <section class="section">
-  <header><h3>Recent requests</h3></header>
+  <header><h3>Recent requests</h3><a href="#/requests">See all</a></header>
   <div class="scroll">
     <table>
       <thead><tr><th>When</th><th>Method</th><th>Path</th><th class="hide-sm">Provider</th><th>Account</th><th>Status</th><th>ms</th></tr></thead>

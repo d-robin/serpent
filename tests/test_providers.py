@@ -125,3 +125,74 @@ def test_database_files_are_private(tmp_path):
         f = tmp_path / f"keys.db{suffix}"
         if f.exists():
             assert stat.S_IMODE(os.stat(f).st_mode) == 0o600, f.name
+
+
+def test_request_history_is_paged_and_filterable(make_client):
+    client = make_client(lambda req: httpx.Response(200 if "ok" in req.url.path else 500, json={}))
+    p = _add_provider(client, "one", "https://one.test")
+    _add_account(client, "k1", p["id"], limit=50)
+    for path in ("ok-1", "ok-2", "bad-1"):
+        client.get(f"/p/one/{path}", headers=CLIENT)
+    allr = client.get("/admin/requests", headers=ADMIN).json()
+    assert allr["total"] == 3 and allr["rows"][0]["path"].endswith("bad-1")
+    failed = client.get("/admin/requests?outcome=failed", headers=ADMIN).json()
+    assert [r["status"] >= 400 for r in failed["rows"]] == [True]
+    paged = client.get("/admin/requests?limit=1&offset=1", headers=ADMIN).json()
+    assert paged["total"] == 3 and len(paged["rows"]) == 1
+    assert client.get("/admin/requests?q=ok-", headers=ADMIN).json()["total"] == 2
+    assert client.get("/admin/requests?q=%25", headers=ADMIN).json()["total"] == 0  # '%' is literal
+    assert client.get("/admin/requests?provider=nope", headers=ADMIN).json()["total"] == 0
+    assert client.get("/admin/requests").status_code == 401
+
+
+def test_request_history_shows_the_query_but_never_credentials(make_client):
+    client = make_client(lambda req: httpx.Response(200, json={}))
+    p = _add_provider(client, "one", "https://one.test")
+    _add_account(client, "k1", p["id"], limit=50)
+    client.get("/p/one/search?engine=amazon&k=air+fryer&api_key=LEAKME&token=T", headers=CLIENT)
+    path = client.get("/admin/requests", headers=ADMIN).json()["rows"][0]["path"]
+    assert path == "/p/one/search?engine=amazon&k=air+fryer"
+    assert "LEAKME" not in path
+
+
+def test_provider_usage_for_serpapi_and_unsupported(make_client):
+    seen = {}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/account":
+            seen["key"] = req.url.params.get("api_key")
+            return httpx.Response(200, json={
+                "account_email": "me@example.com", "plan_name": "Developer",
+                "searches_per_month": 5000, "this_month_usage": 1200,
+                "plan_searches_left": 3800, "total_searches_left": 3900, "extra_credits": 100,
+            })
+        return httpx.Response(200, json={})
+
+    client = make_client(handler)
+    sa = _add_provider(client, "serpapi", "", preset="serpapi")
+    other = _add_provider(client, "other", "https://other.test")
+    a1 = _add_account(client, "SECRETKEY", sa["id"])
+    a2 = _add_account(client, "k2", other["id"])
+
+    got = client.get(f"/admin/accounts/{a1['id']}/provider-usage", headers=ADMIN).json()
+    assert seen["key"] == "SECRETKEY"
+    assert (got["allowance"], got["used"], got["remaining"], got["plan"]) == (5000, 1200, 3900, "Developer")
+    assert "SECRETKEY" not in str(got) and "example.com" not in str(got)  # no key, no email
+
+    none = client.get(f"/admin/accounts/{a2['id']}/provider-usage", headers=ADMIN).json()
+    assert none["supported"] is False and none["note"]
+    assert client.get("/admin/accounts/999/provider-usage", headers=ADMIN).status_code == 404
+    assert client.get(f"/admin/accounts/{a1['id']}/provider-usage", headers=CLIENT).status_code == 403
+
+
+def test_provider_usage_errors_never_leak_the_key(make_client):
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/account":
+            raise httpx.ConnectError(f"boom {req.url}")
+        return httpx.Response(200, json={})
+
+    client = make_client(handler)
+    sa = _add_provider(client, "serpapi", "", preset="serpapi")
+    a = _add_account(client, "SECRETKEY", sa["id"])
+    got = client.get(f"/admin/accounts/{a['id']}/provider-usage", headers=ADMIN).json()
+    assert got["error"] and "SECRETKEY" not in got["error"]

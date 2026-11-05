@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Requests** tab: every call through the router, paged, with filters (result, provider,
+  text), live refresh, and the query string (credential-like parameters are removed).
+  API: `GET /admin/requests`.
+- **Search types** for SerpApi (Google, Amazon, Shopping, News, Images, Maps) in the Search
+  tab; Raw request starts as a GET for SerpApi. Shop results show price and rating.
+- Accounts page shows the **provider's own allowance** next to your limit and usage, for
+  SerpApi (`GET /admin/accounts/{id}/provider-usage`, free, never counted as usage).
 - A **Search** tab in Snake Charmer: type a query, get readable results (title, site, snippet)
   from whatever the provider returns, with the raw response one click away. The request
   shape (method, path, body template) is under Options and remembered. The old Try it tab

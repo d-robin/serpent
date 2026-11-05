@@ -59,6 +59,26 @@ export interface RequestRow {
   provider_slug?: string | null;
 }
 
+export interface ProviderUsage {
+  supported: boolean;
+  error: string | null;
+  note?: string;
+  plan?: string | null;
+  allowance?: number | null;
+  used?: number | null;
+  remaining?: number | null;
+  extra_credits?: number | null;
+  rate_limit_per_hour?: number | null;
+}
+
+export interface RequestPage {
+  total: number;
+  rows: RequestRow[];
+  limit: number;
+  offset: number;
+  kept: number;
+}
+
 export interface Tunables {
   strategy: string;
   max_retries: number;

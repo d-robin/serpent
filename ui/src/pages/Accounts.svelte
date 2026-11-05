@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { del, patch, post, type Account } from '../lib/api';
+  import { onMount } from 'svelte';
+  import { del, get, patch, post, type Account, type ProviderUsage } from '../lib/api';
   import Bar from '../lib/Bar.svelte';
-  import { ago } from '../lib/format';
+  import { ago, hasUsageLookup } from '../lib/format';
   import { store } from '../lib/store.svelte';
 
   const s = $derived(store.status!);
@@ -30,12 +31,30 @@
     if (ok) { f.label = ''; f.api_key = ''; f.notes = ''; agreed = false; open = false; }
   }
 
+  // What each provider says about each key, fetched on demand (free calls, not counted as usage).
+  let usage = $state<Record<number, ProviderUsage | 'loading'>>({});
+  const fmt = (n: number | null | undefined) => (n == null ? '?' : n.toLocaleString('en-US'));
+
+  async function check(a: Account) {
+    usage[a.id] = 'loading';
+    try {
+      usage[a.id] = await get<ProviderUsage>(`/admin/accounts/${a.id}/provider-usage`);
+    } catch (e) {
+      usage[a.id] = { supported: true, error: e instanceof Error ? e.message : 'lookup failed' };
+    }
+  }
+  const checkAll = () => {
+    for (const g of groups) if (g.p.id !== -1 && hasUsageLookup(g.p)) for (const a of g.rows) void check(a);
+  };
+  onMount(() => { if (store.isAdmin) checkAll(); });
+
   const badge = (a: Account) => (a.status === 'active' && a.on_cooldown ? 'cooling' : a.status);
 </script>
 
 <section>
   <header class="section" style="margin-top:0"><h2>Accounts</h2><span class="spacer"></span>
     {#if store.isAdmin}
+      <button onclick={checkAll}>Check provider allowance</button>
       <button onclick={() => confirm('Zero every account’s usage this period?') && store.act(() => post('/admin/reset'), 'All usage reset')}>Reset all usage</button>
       <button class="primary" onclick={() => (open = !open)} aria-expanded={open} disabled={!s.providers.length}>{open ? 'Close' : '+ Add account'}</button>
     {/if}
@@ -71,7 +90,7 @@
         </p>
       {/if}
       <div class="scroll"><table>
-        <thead><tr><th>#</th><th>Label</th><th>Status</th><th>Key</th><th style="min-width:150px">Quota</th><th>Avail</th><th class="hide-sm">OK/Fail</th><th class="hide-sm">Avg ms</th><th class="hide-sm">Last used</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Label</th><th>Status</th><th>Key</th><th style="min-width:150px">Your limit</th><th style="min-width:170px">Provider allowance</th><th>Avail</th><th class="hide-sm">OK/Fail</th><th class="hide-sm">Avg ms</th><th class="hide-sm">Last used</th><th></th></tr></thead>
         <tbody>
           {#each g.rows as a (a.id)}
             <tr>
@@ -80,6 +99,30 @@
               <td><span class="pill {badge(a)}" title={a.on_cooldown ? `cooling until ${a.cooldown_until}` : ''}>{badge(a)}</span></td>
               <td class="mono muted">{store.hints[a.id] ?? '****'}</td>
               <td><Bar used={a.used} limit={a.quota_limit} label="{a.label} quota" /><span class="muted mono" style="font-size:11.5px">{a.used}/{a.quota_limit}</span></td>
+              <td class="provider-cell">
+                {#if !hasUsageLookup(g.p)}
+                  <span class="muted" title="Serpent can only look this up for providers with a public usage endpoint">not available</span>
+                {:else if !store.isAdmin}
+                  <span class="muted">admin only</span>
+                {:else}
+                  {@const u = usage[a.id]}
+                  {#if u === 'loading' || u === undefined}
+                    <span class="muted">checking…</span>
+                  {:else if u.error}
+                    <span class="bad-text" title={u.error}>{u.error}</span>
+                  {:else if !u.supported}
+                    <span class="muted">{u.note}</span>
+                  {:else}
+                    <div><strong>{fmt(u.remaining)}</strong> left of {fmt(u.allowance)}</div>
+                    {#if u.allowance}<Bar used={u.used ?? 0} limit={u.allowance} label="{a.label} provider allowance" />{/if}
+                    <span class="muted mono" style="font-size:11.5px">{u.plan ?? ''}{u.plan ? ' · ' : ''}{fmt(u.used)} used{u.extra_credits ? ` · +${fmt(u.extra_credits)} extra` : ''}</span>
+                    {#if u.remaining != null && a.quota_limit - a.used > u.remaining}
+                      <div class="warn-text">Your limit allows {fmt(a.quota_limit - a.used)} more, but the provider has {fmt(u.remaining)} left.</div>
+                    {/if}
+                  {/if}
+                  <button class="tiny" onclick={() => check(a)} disabled={usage[a.id] === 'loading'}>Refresh</button>
+                {/if}
+              </td>
               <td class="num">{a.available}</td>
               <td class="hide-sm num">{a.ok}/{a.failed}</td>
               <td class="hide-sm num">{a.avg_latency_ms ?? '—'}</td>
@@ -92,7 +135,7 @@
                 {/if}
               </td>
             </tr>
-          {:else}<tr><td colspan="10" class="empty">No accounts for this provider.</td></tr>{/each}
+          {:else}<tr><td colspan="11" class="empty">No accounts for this provider.</td></tr>{/each}
         </tbody>
       </table></div>
     </div>
@@ -100,3 +143,9 @@
     <div class="card empty">Add a provider first, then register accounts under it.</div>
   {/each}
 </section>
+
+<style>
+  .provider-cell { min-width: 170px; }
+  .warn-text { color: var(--warn); font-size: 12px; margin-top: 2px; }
+  .bad-text { color: var(--bad); font-size: 12px; }
+</style>
