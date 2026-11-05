@@ -124,6 +124,10 @@ class Home:
     def ensure(self) -> None:
         for d in (self.root, self.data, self.logs, self.run):
             d.mkdir(parents=True, exist_ok=True)
+        try:
+            self.data.chmod(0o700)  # holds the database with provider keys
+        except OSError:
+            pass
 
     @property
     def is_checkout(self) -> bool:

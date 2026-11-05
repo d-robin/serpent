@@ -110,3 +110,18 @@ def test_tunables_apply_and_validate(make_client):
     assert client.patch("/admin/tunables", headers=ADMIN, json={"strategy": "nope"}).status_code == 400
     assert client.patch("/admin/tunables", headers=ADMIN, json={"bind_port": 1}).status_code == 400
     assert client.get("/api/status").json()["tunables"]["max_retries"] == 4
+
+
+def test_database_files_are_private(tmp_path):
+    import os
+    import stat
+
+    from serpent import accounts, db, providers
+
+    db.init_db(tmp_path / "keys.db")
+    providers.add_provider("p", base_url="https://x.test")
+    accounts.add_account("sk-secret", label="a")
+    for suffix in ("", "-wal", "-shm"):
+        f = tmp_path / f"keys.db{suffix}"
+        if f.exists():
+            assert stat.S_IMODE(os.stat(f).st_mode) == 0o600, f.name

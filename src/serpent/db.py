@@ -14,6 +14,7 @@ Design notes
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -175,9 +176,24 @@ def init_db(path: str | Path | None = None) -> None:
     with _init_lock:
         if path is not None:
             configure(path)
+        _private_files()
         conn = connection()
         conn.executescript(SCHEMA)
         _migrate(conn)
+        _private_files()  # the -wal/-shm files exist only once SQLite has opened the db
+
+
+def _private_files() -> None:
+    """The database holds provider API keys: keep it readable by its owner only (0600)."""
+    base = Path(db_path())
+    base.parent.mkdir(parents=True, exist_ok=True)
+    if not base.exists():
+        os.close(os.open(base, os.O_CREAT | os.O_WRONLY, 0o600))
+    for suffix in ("", "-wal", "-shm"):
+        try:
+            os.chmod(f"{base}{suffix}", 0o600)
+        except OSError:
+            pass  # absent, or not ours to change
 
 
 def close_current_thread() -> None:

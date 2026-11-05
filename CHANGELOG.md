@@ -21,6 +21,8 @@ All notable changes to this project are documented here. The format follows
   `--delete-data`). `install.sh` records what it created.
 
 ### Changed
+- The database (which holds provider API keys) and its -wal/-shm files, and `data/`, are
+  now created owner-only (0600/0700); existing installs are tightened on the next start.
 - Each install remembers its port and reuses it; `serpent start` on a running install
   refuses (exit 1) and prints its URL, pid and folder, `serpent up` prints the same and
   exits 0; a busy port is reported with who holds it.
