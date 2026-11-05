@@ -6,15 +6,16 @@
 
 ```bash
 ./install.sh
-sudo cp deploy/serpent.local.service /etc/systemd/system/serpent.service
+.venv/bin/serpent stop        # systemd will run it instead
+.venv/bin/serpent systemd --out serpent.service
+sudo cp serpent.service /etc/systemd/system/serpent.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now serpent
 journalctl -u serpent -f
 ```
 
-`install.sh` writes `deploy/serpent.local.service` with the real
-`User=`, `WorkingDirectory=` and paths of wherever the project sits, so there
-is nothing to hand-edit. The shipped `deploy/serpent.service` is the
+`serpent systemd` prints a unit with the real `User=`, `WorkingDirectory=` and
+paths of wherever the project sits, so there is nothing to hand-edit. The shipped `deploy/serpent.service` is the
 `/home/pi/serpent` template. The unit caps `MemoryMax=320M` and restricts
 write access to `data/`.
 

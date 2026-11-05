@@ -74,6 +74,20 @@ No provider key yet? `scripts/demo.sh` runs a throwaway instance with a fake pro
 > Serpent listens on `127.0.0.1` only, so nothing is exposed until you choose
 > (`serpent up --host 0.0.0.0`). Before you do, read [SECURITY.md](SECURITY.md).
 
+## Install options
+
+| Way | Command | Good for |
+| --- | --- | --- |
+| **One command** (recommended) | `git clone https://github.com/d-robin/serpent && cd serpent && ./install.sh` | Trying it, a laptop, a Raspberry Pi |
+| **By hand** | `python3 -m venv .venv && .venv/bin/pip install -e . && .venv/bin/serpent up` | You want to see every step |
+| **Docker** | `docker build -t serpent . && docker run -p 8971:8971 -v serpent-data:/data serpent` | Servers, no Python on the host |
+| **systemd service** | `serpent systemd --out serpent.service`, then copy it to `/etc/systemd/system/` | Starting at boot (see [Deploying](docs/deploying.md)) |
+| **Move to another machine** | `serpent move user@host:/path` | Redeploying with your data |
+| `pip install serpent-router` | not published yet | coming once it is on PyPI |
+
+All of them end the same way: open Snake Charmer at `/ui/` and add your provider.
+`serpent uninstall` reverses the first two (see below).
+
 ## Uninstall, or change how it is deployed
 
 ```bash
