@@ -389,7 +389,40 @@ def base_port(home: Home, explicit: int | None = None) -> int:
     for raw in (os.environ.get("SERPENT_PORT"), read_env_file(home.env_file).get("BIND_PORT")):
         if raw and raw.isdigit():
             return int(raw)
-    return DEFAULT_PORT
+    from .uninstall import remembered_port
+    return remembered_port(home) or DEFAULT_PORT
+
+
+def port_owner(port: int) -> str:
+    """Best effort: who is listening on a local port ('' when it cannot be told)."""
+    def lsof(*args: str) -> str:
+        try:
+            return subprocess.run(["lsof", "-nP", *args], capture_output=True, text=True,
+                                  timeout=3).stdout
+        except (OSError, subprocess.SubprocessError):
+            return ""
+
+    fields = {ln[0]: ln[1:] for ln in lsof(f"-iTCP:{port}", "-sTCP:LISTEN", "-Fpc").splitlines() if ln}
+    pid = fields.get("p")
+    if not pid or not pid.isdigit():
+        return ""
+    cwd = next((ln[1:] for ln in lsof("-p", pid, "-a", "-d", "cwd", "-Fn").splitlines()
+                if ln.startswith("n")), "")
+    try:
+        if cwd and int((Path(cwd) / "run" / "serpent.pid").read_text().strip()) == int(pid):
+            return f"another Serpent install at {cwd} (pid {pid})"
+    except (OSError, ValueError):
+        pass
+    return f"pid {pid} ({fields.get('c', '?')}{', ' + cwd if cwd else ''})"
+
+
+def print_install_info(home: Home) -> None:
+    """What a user needs to find a running install again."""
+    d = status_data(home)
+    cmd_status(home, argparse.Namespace(json=False))
+    if d.get("url"):
+        say(f"ui        {d['url']}/ui/")
+    say(f"port      {d['port']}   (this install keeps it; another folder gets the next free one)")
 
 
 def pick_host(explicit: str | None = None) -> str:
@@ -417,9 +450,11 @@ def uvicorn_cmd(host: str, port: int, *, workers: int | None = None, level: str 
 
 def cmd_start(home: Home, args: argparse.Namespace) -> int:
     if is_running(home):
-        say(f"already running (pid {read_pid(home)}, port {read_port(home) or '?'})")
-        say("use: serpent restart")
-        return 0
+        say("Serpent is already running for this install - not starting a second copy.\n")
+        print_install_info(home)
+        say("\nstop it: serpent stop    restart: serpent restart")
+        say("a second install in another folder will start on its own port")
+        return 1
     clear_run_files(home)
     home.ensure()
     rotate_log(home)
@@ -433,8 +468,10 @@ def cmd_start(home: Home, args: argparse.Namespace) -> int:
         raise CliError(reason)
     logline(home, f"start requested host={host} base={base} chosen={chosen} workers={args.workers or 1}")
     if chosen != base:
-        logline(home, f"port {base} was busy, using {chosen}")
-        say(f"port {base} is busy, using {chosen}")
+        owner = port_owner(base)
+        why = f"port {base} is in use" + (f" by {owner}" if owner else "")
+        logline(home, f"{why}, using {chosen}")
+        say(f"{why}; using {chosen}")
 
     level = os.environ.get("LOG_LEVEL", read_env_file(home.env_file).get("LOG_LEVEL", "info")).lower()
     with home.log.open("ab") as logfh:
@@ -459,6 +496,8 @@ def cmd_start(home: Home, args: argparse.Namespace) -> int:
     if code != 200:
         return _start_failed(home, proc, url)
 
+    from .uninstall import remember_port
+    remember_port(home, chosen)
     logline(home, f"started pid={proc.pid} host={host} port={chosen} url={url}")
     say(f"started  pid {proc.pid} on {url}")
     say(f"ui         {url}/")
@@ -543,6 +582,9 @@ def cmd_restart(home: Home, args: argparse.Namespace) -> int:
 
 
 def cmd_run(home: Home, args: argparse.Namespace) -> int:
+    if is_running(home):
+        raise CliError(f"already running for this install (pid {read_pid(home)}, "
+                       f"port {read_port(home) or '?'}); serpent stop first")
     host = pick_host(args.host)
     base = base_port(home, args.port)
     chosen = find_port(base, host)
@@ -1037,6 +1079,16 @@ def next_steps(url: str, *, key: str | None) -> str:
 
 def cmd_up(home: Home, args: argparse.Namespace) -> int:
     """One command: initialise if needed, start, and open Snake Charmer signed in."""
+    if is_running(home):
+        say("Serpent is already running for this install - not starting a second copy.\n")
+        print_install_info(home)
+        port = read_port(home)
+        local = pick_host(args.host) in ("127.0.0.1", "localhost", "::1")
+        key = admin_key(home) if local else None
+        if port:
+            say(f"\nopen      http://127.0.0.1:{port}/ui/" + (f"#key={key}" if key else ""))
+        say("stop it: serpent stop    restart: serpent restart")
+        return 0
     if not home.env_file.exists():
         cmd_init(home, argparse.Namespace(force=False, json=False, from_up=True))
         say("")

@@ -21,6 +21,9 @@ All notable changes to this project are documented here. The format follows
   `--delete-data`). `install.sh` records what it created.
 
 ### Changed
+- Each install remembers its port and reuses it; `serpent start` on a running install
+  refuses (exit 1) and prints its URL, pid and folder, `serpent up` prints the same and
+  exits 0; a busy port is reported with who holds it.
 - No provider is preconfigured any more. A fresh install starts empty; the first provider
   you add becomes the default route, and `/v1/*` answers 503 with instructions until then.
   `UPSTREAM_BASE_URL` still works to adopt an older single-upstream setup.

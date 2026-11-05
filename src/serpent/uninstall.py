@@ -75,6 +75,23 @@ def record_install(home: Home) -> None:
         pass  # a read-only home must not break `serpent init`
 
 
+def remembered_port(home: Home) -> int | None:
+    port = read_manifest(home).get("port")
+    return port if isinstance(port, int) else None
+
+
+def remember_port(home: Home, port: int) -> None:
+    """Pin this install to ``port``: later starts try it first (see ``cli.base_port``)."""
+    data = read_manifest(home)
+    if data.get("port") == port:
+        return
+    data["port"] = port
+    try:
+        manifest_path(home).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
 # ------------------------------------------------------------ inventory -----
 
 

@@ -88,6 +88,13 @@ No provider key yet? `scripts/demo.sh` runs a throwaway instance with a fake pro
 All of them end the same way: open Snake Charmer at `/ui/` and add your provider.
 `serpent uninstall` reverses the first two (see below).
 
+## One install, one port
+
+Each install (folder) remembers its own port, starting from 8971. Starting the same
+install twice does not launch a second copy: it says so and prints that install's URL,
+pid, folder and log. Start Serpent from another folder and it takes the next free port,
+telling you who holds the one it skipped. Stopping and restarting never swaps ports.
+
 ## After a reboot
 
 `./install.sh` and `serpent up` start Serpent as a background process. It **does not

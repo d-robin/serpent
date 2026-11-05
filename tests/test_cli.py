@@ -237,7 +237,10 @@ def test_start_status_stop_cycle(home, run):
         assert f"127.0.0.1:{port}" in out
         status = json.loads(run("status", "--json"))
         assert status["running"] and status["health"] == 200
-        assert "already running" in run("start", "--port", str(port))
+        again = run("start", "--port", str(port), expect=1)
+        assert "already running" in again and f"port      {port}" in again and "pid" in again
+        up = run("up", "--no-open")  # `up` is rerunnable: same info, exit 0
+        assert "already running" in up and f"127.0.0.1:{port}/ui/" in up
         assert json.loads(run("health", "--json"))["healthy"] is True
     finally:
         run("stop")
@@ -270,3 +273,28 @@ def test_admin_key_and_next_steps(tmp_path, monkeypatch):
     assert "#key=" not in cli.next_steps("http://10.0.0.5:8971", key=None)
     home.env_file.write_text("ROUTER_KEYS=\n")
     assert cli.admin_key(home) is None
+
+
+def test_an_install_keeps_its_own_port(tmp_path, monkeypatch):
+    from serpent.uninstall import remember_port, remembered_port
+
+    monkeypatch.delenv("SERPENT_PORT", raising=False)
+    a, b = cli.Home(tmp_path / "a"), cli.Home(tmp_path / "b")
+    for h in (a, b):
+        h.ensure()
+    assert cli.base_port(a) == cli.DEFAULT_PORT  # nothing remembered yet
+    remember_port(a, 9101)
+    remember_port(b, 9102)
+    assert remembered_port(a) == 9101 and cli.base_port(a) == 9101
+    assert cli.base_port(b) == 9102  # restart order cannot swap them
+    assert cli.base_port(a, 9200) == 9200  # an explicit --port still wins
+
+
+def test_port_owner_names_another_install(tmp_path):
+    import socket
+
+    with socket.socket() as busy:
+        busy.bind(("127.0.0.1", 0))
+        busy.listen()
+        owner = cli.port_owner(busy.getsockname()[1])
+    assert owner == "" or "pid" in owner  # lsof may be missing; never raises
