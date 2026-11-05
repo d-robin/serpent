@@ -1030,6 +1030,8 @@ def next_steps(url: str, *, key: str | None) -> str:
         "    5. Use it:    point your app at "
         f"{url}/v1/... with your client key (see the .env file)\n"
         "\n  Prefer the terminal?  serpent --help   (serpent providers add / accounts add)\n"
+        "\n  After a reboot Serpent is not running: start it again with  serpent up\n"
+        "  (to start at boot on Linux: serpent systemd --help, or see docs/deploying.md)\n"
     )
 
 
