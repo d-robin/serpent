@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **API contract**: `GET /v1/contract` (client key; Markdown or `?format=json`) is generated
+  from the live setup and describes routes, auth, per-provider requests (SerpApi, Serper,
+  Brave), response fields, headers, errors and rules; `GET /llms.txt` points AI tools to it.
+  The **Integrate** tab copies a ready prompt or the contract text for an AI assistant.
+- Documentation for people: an index, Getting started, a rewritten Architecture (diagrams),
+  Workflows and Things to know.
 - **Requests** tab: every call through the router, paged, with filters (result, provider,
   text), live refresh, and the query string (credential-like parameters are removed).
   API: `GET /admin/requests`.

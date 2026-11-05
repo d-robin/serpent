@@ -17,17 +17,22 @@ account, injects that account's key, retries elsewhere on failure and keeps a
 durable ledger of every credit spent.
 
 ```
-your app ──► /v1/search ──►  Serpent  ──► chain "web":  serper account 1 (250/mo)
-            (one key)        rotation +                  serper account 2 (250/mo)
-                             quota ledger   ──fallback──► serpapi account 1 (100/mo)
+your app ──► /p/serpapi/… ──►            ──► SerpApi  (account 1, account 2, …)
+            one router key    Serpent
+your app ──► /p/serper/…  ──►  rotation  ──► Serper   (account 1, …)
+                               + ledger
                                   │
-                                  └──► Snake Charmer UI · quota API · Prometheus metrics
+                                  └──► Snake Charmer UI · quota API · contract · metrics
 ```
 
 - **Pool free tiers.** Spread traffic over many accounts and never exceed a limit,
   even across workers (credits are reserved in SQLite transactions).
-- **Providers and fallback chains.** Mix providers; when one is dry or failing,
-  the next takes over.
+- **Providers and fallback chains.** Several providers side by side, each with its own
+  accounts; a chain falls through to the next step when one is dry or failing. Serpent
+  passes requests through unchanged (it does not translate between providers), so each route
+  speaks one provider's API.
+- **Built for AI-assisted development.** `GET /v1/contract` describes how to call your
+  router, generated from your live setup; the Integrate tab hands it to an AI assistant.
 - **Snake Charmer.** A web UI to add providers and accounts, build chains, tune
   rotation and try requests. Bundled, offline, no CDN.
 - **Boring to run.** Three Python dependencies, one SQLite file, about 60 MB RSS.
@@ -152,8 +157,11 @@ It never deletes the source folder and never runs `sudo`; for a systemd service 
 
 | | |
 | --- | --- |
+| [Getting started](docs/getting-started.md) | zero to your first search |
+| [Architecture](docs/architecture.md) | the pieces, what happens to a request, data and security model |
+| [Workflows](docs/workflows.md) | add accounts, build an app (or have an AI), survive reboots, move, back up, uninstall |
+| [Things to know](docs/important-things.md) | credits, key storage, no translation, exposure, limits |
 | [Reference](docs/reference.md) | request lifecycle, quota model, rotation, failure policy, API, every setting |
-| [Architecture](docs/architecture.md) | modules, data model, design decisions |
 | [Responsible use](docs/responsible-use.md) | read before pooling accounts with one provider |
 | [Deploying](docs/deploying.md) | systemd, Docker, Raspberry Pi, TLS, backups, moving an install |
 | [Snake Charmer](ui/README.md) | the UI: development and build |

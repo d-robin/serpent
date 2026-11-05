@@ -12,7 +12,7 @@ cooling down it moves to the next.
 
 | Route | Goes to |
 | --- | --- |
-| `/v1/*` | the **default route** (a provider or chain; `default` out of the box, built from `UPSTREAM_BASE_URL`) |
+| `/v1/*` | the **default route** (a provider or chain; the first provider you add becomes it) |
 | `/p/{slug}/*` | the provider or chain called `slug` |
 
 Responses carry `X-Router-Provider` (which provider answered) next to
@@ -36,7 +36,7 @@ Every proxied request goes through a reserve → forward → settle cycle:
    account produced exactly 250 × `200` and 50 × `429`, with `in_flight`
    returning to 0.)
 2. **Forward** — the caller's method, path, query and body are replayed against
-   `UPSTREAM_BASE_URL` with the account's key attached. Your provider keys are
+   the provider's base URL with the account's key attached. Your provider keys are
    never visible to callers, and the caller's router key is never forwarded.
 3. **Settle** — success consumes the credit; a failure releases it and applies a
    cooldown depending on the cause (see below).
@@ -108,6 +108,13 @@ biggest quota saver in practice, and it is off by default so behaviour stays
 predictable. Cached responses carry `X-Cache: HIT`.
 
 ---
+
+## Learning how to call the router
+
+`GET /v1/contract` (client key; `?format=json` for JSON) returns a generated description of
+this router: routes, authentication, per-provider operations with examples, headers, errors
+and rules. `GET /llms.txt` (open) points AI tools at it. See
+[Workflows](workflows.md#build-an-app-on-it-or-have-an-ai-build-one).
 
 ## Calling the proxy
 

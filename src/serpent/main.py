@@ -20,6 +20,7 @@ from . import (
     __version__,
     accounts,
     cache,
+    contract,
     dashboard,
     db,
     metrics,
@@ -309,6 +310,25 @@ def create_app(
         if not settings.dashboard_public:
             security.require(request, "read")
         return HTMLResponse(dashboard.PAGE)
+
+    # ---- contract: how to call this router (for apps and AI assistants) -------
+    @app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
+    async def llms_txt(request: Request):
+        return PlainTextResponse(contract.render_llms_txt(str(request.base_url).rstrip("/")))
+
+    @app.get(prefix + "/contract", include_in_schema=False)
+    async def get_contract(request: Request, format: str = "markdown"):
+        security.require(request, "client")
+
+        def gather():
+            return (providers.list_providers(), providers.list_chains(),
+                    providers.get_default_route())
+
+        provs, chains, default = await _db(gather)
+        doc = contract.build(settings, provs, chains, default, str(request.base_url).rstrip("/"))
+        if format == "json":
+            return JSONResponse(doc)
+        return PlainTextResponse(contract.render_markdown(doc), media_type="text/markdown; charset=utf-8")
 
     # ---- quota read API --------------------------------------------------
     @app.get(prefix + "/quota")
