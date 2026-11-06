@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from './portal';
   import { store } from './store.svelte';
   const d = $derived(store.dialog);
   function key(e: KeyboardEvent) { if (e.key === 'Escape') d?.resolve(false); }
@@ -7,6 +8,7 @@
 
 <svelte:window onkeydown={key} />
 {#if d}
+  <div class="layer" use:portal>
   <div class="scrim" onclick={() => d.resolve(false)} role="presentation"></div>
   <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t">
     <h2 id="dlg-t">{d.title}</h2>
@@ -15,5 +17,6 @@
       <button class="btn ghost" onclick={() => d.resolve(false)}>Cancel</button>
       <button use:focus class="btn {d.danger ? 'danger' : 'primary'}" onclick={() => d.resolve(true)}>{d.label}</button>
     </div>
+  </div>
   </div>
 {/if}

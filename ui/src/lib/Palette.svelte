@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
+  import { portal } from './portal';
   import type { PaletteItem as Item } from './palette';
   let { items, onclose }: { items: Item[]; onclose: () => void } = $props();
   let q = $state('');
@@ -23,6 +24,7 @@
   }
 </script>
 
+<div class="layer" use:portal>
 <div class="scrim" onclick={onclose} role="presentation"></div>
 <div class="pal" role="dialog" aria-modal="true" aria-label="Command palette">
   <input bind:this={input} bind:value={q} onkeydown={key} placeholder="Jump to a page or run an action…" aria-label="Command" autocomplete="off" spellcheck="false" />
@@ -38,4 +40,5 @@
     {:else}<li><h5>No match</h5></li>{/each}
   </ul>
   <div class="foot"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span></div>
+</div>
 </div>

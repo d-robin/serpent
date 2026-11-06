@@ -40,3 +40,11 @@ placeholder numbers, and the "cream paper + terracotta" escape route.
 
 Dark and light, 1440 / 1024 / 390 wide, keyboard only, reduced motion, long strings, empty and
 error states, and "would this pass for a product from a good studio?"
+
+## Overlays
+
+Sheets, dialogs and the palette are rendered into `<body>` through the `portal` action
+(`src/lib/portal.ts`). Never nest them inside a page container: an ancestor with a transform
+or animation becomes the reference frame for `position: fixed`, and the overlay ends up boxed
+into the page instead of covering the window (this happened in Safari). The page fade-in uses
+`animation-fill-mode: backwards` so it leaves no transform behind.

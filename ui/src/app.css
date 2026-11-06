@@ -95,7 +95,7 @@ kbd {
 .who .grow { flex: 1; min-width: 0; font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .main { min-width: 0; padding: 40px clamp(20px, 4vw, 56px) 96px; }
-.page { max-width: 1040px; margin: 0 auto; animation: rise var(--t) var(--ease) both; }
+.page { max-width: 1040px; margin: 0 auto; animation: rise var(--t) var(--ease) backwards; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .page-head { display: flex; align-items: flex-end; gap: 24px; margin-bottom: 36px; flex-wrap: wrap; }
 .page-head .titles { flex: 1; min-width: 260px; }
@@ -281,6 +281,9 @@ pre.out { margin: 0; background: var(--bg-sunk); border: 1px solid var(--line); 
   .gate { grid-template-columns: 1fr; } .gate .brandside { display: none; }
   .hide-sm { display: none; }
 }
+
+/* Overlays are moved to <body>; the wrapper itself draws nothing. */
+.layer { display: contents; }
 
 /* ---- additions ------------------------------------------------------------- */
 .dialog { position: fixed; z-index: 71; top: 22vh; left: 50%; width: min(440px, 92vw); transform: translateX(-50%); background: var(--surface); border-radius: var(--r-3); box-shadow: var(--pop); padding: 28px; animation: pop var(--t) var(--ease) both; }
