@@ -99,3 +99,28 @@ def test_never_removes_the_python_package_on_its_own(installed, run):
     out = run("uninstall", "--yes", "--delete-data")
     metadata.distribution("serpent-router")  # still installed: it may serve other homes
     assert "pip uninstall" in out or "pipx uninstall" in out or "serpent-router" not in out
+
+
+def test_backup_is_private_valid_and_treated_as_data(installed, run, home):
+    import os
+    import sqlite3
+    import stat
+
+    out = run("backup")
+    files = list((home / "backups").glob("serpent-*.db"))
+    assert len(files) == 1 and str(files[0]) in out
+    assert stat.S_IMODE(files[0].stat().st_mode) == 0o600
+    assert stat.S_IMODE(os.stat(home / "backups").st_mode) == 0o700
+    con = sqlite3.connect(files[0])
+    try:
+        assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    finally:
+        con.close()
+
+    inv = uninstall.scan(cli.Home(home))
+    item = inv.get("backups")
+    assert item is not None and item.category == "data"  # kept by default, deleted only with the data
+    run("uninstall", "--yes", "--keep-data")
+    assert (home / "backups").exists()
+    run("uninstall", "--yes", "--delete-data")
+    assert not (home / "backups").exists()

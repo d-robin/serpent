@@ -1430,6 +1430,38 @@ def cmd_systemd(home: Home, args: argparse.Namespace) -> int:
     return 0
 
 
+def backup_db(home: Home) -> Path:
+    """Copy the live database to ``backups/`` using SQLite's online backup (safe while running)."""
+    import sqlite3
+    from datetime import datetime
+
+    from . import db
+
+    boot(home)
+    folder = home.root / "backups"
+    folder.mkdir(mode=0o700, exist_ok=True)
+    os.chmod(folder, 0o700)
+    target = folder / f"serpent-{datetime.now():%Y%m%d-%H%M%S}.db"
+    src = sqlite3.connect(db.db_path())
+    try:
+        dst = sqlite3.connect(target)
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+    finally:
+        src.close()
+    os.chmod(target, 0o600)
+    return target
+
+
+def cmd_backup(home: Home, args: argparse.Namespace) -> int:
+    target = backup_db(home)
+    say(f"backed up to {target} ({target.stat().st_size // 1024 + 1} KB)")
+    say("It contains your provider keys: keep it as private as .env.")
+    return 0
+
+
 def cmd_keys(home: Home, args: argparse.Namespace) -> int:
     """Recover keys: router keys come from .env, provider keys from the database."""
     from . import keys
@@ -1963,6 +1995,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--yes", "-y", action="store_true", help="do not ask questions")
     sp.add_argument("--dry-run", action="store_true", help="show what would happen and change nothing")
 
+    add("backup", cmd_backup, "copy the database to backups/ (safe while running; contains your provider keys)")
     sp = add("systemd", cmd_systemd, "print a systemd unit with this machine's real paths")
     serve_opts(sp)
     sp.add_argument("--user")

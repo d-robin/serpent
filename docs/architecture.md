@@ -210,8 +210,9 @@ port.
   to a server and the app removes from the address bar immediately.
 - **The CLI** (`serpent`) is plain standard-library Python. Most commands read the database
   directly, so management works even when the server is stopped.
-- **The terminal UI** (`serpent`, no arguments, in a terminal) is a keyboard-driven menu
-  (arrow keys or `j`/`k`, Enter to open, `q` to go back) over the same operations.
+- **The terminal UI** (`serpent`, no arguments, in a terminal) is a tabbed, keyboard- and
+  mouse-driven dashboard over the same operations, including diagnostics, backups and
+  uninstall (see [Terminal UI](tui.md)).
 - **The contract** (`/v1/contract`) is generated from the current providers and chains, so an
   application or AI assistant can learn exactly how to call this router.
 

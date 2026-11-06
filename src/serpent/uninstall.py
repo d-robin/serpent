@@ -179,6 +179,7 @@ def scan(home: Home) -> Inventory:
 
     add("data", "database: accounts, provider keys, request history", "data", "data")
     add("env", "settings and router keys (.env)", ".env", "data")
+    add("backups", "database backups (contain provider keys)", "backups", "data")
     add("logs", "logs", "logs", "install")
     add("run", "runtime files (pid, port)", "run", "install")
     add("unit", "generated systemd unit file", "deploy/serpent.local.service", "install")

@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **A modern terminal UI**: tabs (`1`-`8`), a live Overview with a credits gauge and traffic
+  sparkline, usage gauges on Accounts, live `/` filtering, a `:` command palette, mouse
+  support, toasts and a 256-colour theme (ASCII fallback; honours `NO_COLOR`).
+- **Manage** tab in the terminal UI: doctor, last fault, self-test, install details, rotation
+  and retry settings, backup, reset usage, clear history, systemd unit, copy/move, and
+  **uninstall** with the same plan, keep-data choice and verification as the CLI.
+- `serpent backup`: online SQLite backup into `backups/` (private; uninstall treats it as data).
 - **API contract**: `GET /v1/contract` (client key; Markdown or `?format=json`) is generated
   from the live setup and describes routes, auth, per-provider requests (SerpApi, Serper,
   Brave), response fields, headers, errors and rules; `GET /llms.txt` points AI tools to it.

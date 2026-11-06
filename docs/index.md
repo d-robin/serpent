@@ -11,6 +11,7 @@ spent. **Snake Charmer** is its web interface; `serpent` is its command line and
 | --- | --- |
 | get it running and make your first search | [Getting started](getting-started.md) |
 | understand how the pieces fit and what happens to a request | [Architecture](architecture.md) |
+| use the terminal interface | [Terminal UI](tui.md) |
 | do a specific job (add an account, survive a reboot, move servers, build an app on it) | [Workflows](workflows.md) |
 | avoid surprises | [Things to know](important-things.md) |
 | look up an endpoint, setting or exact behaviour | [Reference](reference.md) |

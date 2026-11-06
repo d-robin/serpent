@@ -104,13 +104,15 @@ telling you who holds the one it skipped. Stopping and restarting never swaps po
 ## Terminal UI and recovering keys
 
 ```bash
-.venv/bin/serpent            # in a terminal: opens the full-screen UI (same as `serpent tui`)
+./serpent            # in a terminal: opens the full-screen UI (same as `serpent tui`)
 ```
 
-Move with the arrow keys (or `j`/`k`), `Enter` or `→` to open, `←`/`Esc`/`q` to go back,
-`?` for help. Screens: Overview (start/stop/health), Providers, Accounts, Chains &
-routing, Keys & sign-in, Requests, Logs. It changes the same data as Snake Charmer. It
-needs `curses` (macOS, Linux, Raspberry Pi; not Windows).
+A tabbed dashboard: a live Overview (server, credits gauge, traffic sparkline), Providers,
+Accounts (with usage gauges), Chains, Keys, Requests, Logs, and **Manage** (diagnostics,
+settings, backups, systemd, move, and uninstall). Jump with `1`-`8` or `Tab`, move with the
+arrow keys, `Enter` to act, `/` to filter as you type, `:` for a command palette, `?` for all
+keys; the mouse works too. It changes the same data as Snake Charmer. Needs `curses`
+(macOS, Linux, Raspberry Pi; not Windows). Details: [docs/tui.md](docs/tui.md).
 
 Lost a key? Router keys are in `.env`, provider keys in the database. You can read them back:
 
@@ -159,6 +161,7 @@ It never deletes the source folder and never runs `sudo`; for a systemd service 
 | --- | --- |
 | [Getting started](docs/getting-started.md) | zero to your first search |
 | [Architecture](docs/architecture.md) | the pieces, what happens to a request, data and security model |
+| [Terminal UI](docs/tui.md) | launching it, every key, every screen, what Manage can do |
 | [Workflows](docs/workflows.md) | add accounts, build an app (or have an AI), survive reboots, move, back up, uninstall |
 | [Things to know](docs/important-things.md) | credits, key storage, no translation, exposure, limits |
 | [Reference](docs/reference.md) | request lifecycle, quota model, rotation, failure policy, API, every setting |

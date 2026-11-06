@@ -93,7 +93,7 @@ serpent keys rotate admin        # new admin key (also: client, read); restart a
 ```
 
 Lost the admin key but have the machine? `serpent keys --reveal` reads it from `.env`. In the
-terminal UI it is the **Keys & sign-in** screen. Provider keys can be recovered the same way
+terminal UI it is the **Keys** tab. Provider keys can be recovered the same way
 because they are stored in the database.
 
 ## Survive a reboot
@@ -119,8 +119,9 @@ Or by hand: copy the folder (or just `data/` and `.env`) to the new machine and 
 
 ## Back up and restore
 
-Stop the server (or use SQLite's online backup, see [Deploying](deploying.md#backups)), then
-copy `data/serpent.db` and `.env`. Restore by putting them back in a home folder and starting
+Run `serpent backup` (or **Manage → Back up the database now** in the terminal UI). It uses
+SQLite's online backup, so it is safe while the server runs, and writes a private copy into
+`backups/`. Then copy that file and `.env`. Restore by putting them back in a home folder and starting
 it. Treat the backup like a password file: it contains your provider keys.
 
 ## Uninstall or redeploy differently
@@ -128,6 +129,9 @@ it. Treat the backup like a password file: it contains your provider keys.
 ```bash
 serpent uninstall            # shows exactly what it found, asks, removes, then verifies
 ```
+
+In the terminal UI: **Manage → Uninstall Serpent…** (same plan, same questions, same
+verification).
 
 It lists the server, logs, runtime files, the virtual environment it created, the generated
 service file and the install record, and **asks whether to keep your data** (the default).

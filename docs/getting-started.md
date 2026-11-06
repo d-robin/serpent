@@ -72,7 +72,7 @@ to read.
 
 | | |
 | --- | --- |
-| `./serpent` | open the terminal UI (first run: set up and start) |
+| `./serpent` | open the terminal UI, see [Terminal UI](tui.md) (first run: set up and start) |
 | `./serpent up` | start, or show that it is already running, and print the sign-in link |
 | `./serpent stop` · `status` · `log` | control and inspect |
 | `./serpent keys` | show or recover keys · `keys link` · `keys rotate admin` |
