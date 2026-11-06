@@ -161,6 +161,10 @@ It never deletes the source folder and never runs `sudo`; for a systemd service 
 | | |
 | --- | --- |
 | [Getting started](docs/getting-started.md) | zero to your first search |
+| [Connect apps and agents](docs/connecting.md) | routes, keys, curl/Python/Node examples, errors, AI agent tool use |
+| [Run and operate](docs/operations.md) | start, stop, ports, logs, health, backups, upgrades |
+| [Troubleshooting](docs/troubleshooting.md) | symptom to fix, and what to collect for a bug report |
+| [Command reference](docs/cli.md) | every `serpent` command |
 | [Architecture](docs/architecture.md) | the pieces, what happens to a request, data and security model |
 | [Terminal UI](docs/tui.md) | launching it, every key, every screen, what Manage can do |
 | [Workflows](docs/workflows.md) | add accounts, build an app (or have an AI), survive reboots, move, back up, uninstall |

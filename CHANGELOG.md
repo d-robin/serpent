@@ -6,7 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **Stopping a server started from the terminal UI took 10 s** and recorded a false
+  `stop-forced` fault: the exited server was an unreaped child (a zombie) that `pid_alive()`
+  still counted as running. Zombies are now reaped; stop takes a fraction of a second.
+
 ### Changed
+- The terminal UI runs every long action (start, stop, restart, health, doctor, self-test,
+  backup, move, uninstall) in the background and shows a live panel: ticked steps, a spinner on
+  the current one, a moving bar and elapsed time.
 - **Snake Charmer redesigned** from the ground up (see `ui/DESIGN.md`): fixed sidebar, serif
   page titles and hero numerals (Instrument Serif), Instrument Sans and IBM Plex Mono for
   the interface and data, a restrained graphite and chalk palette with one signal accent,
@@ -18,6 +26,12 @@ All notable changes to this project are documented here. The format follows
   fallback when the UI bundle has not been built.
 
 ### Added
+- **Help** in Snake Charmer: a searchable guide with live examples (your address and provider)
+  covering start and run, connecting apps and AI agents, how it works, deploying, logs and
+  monitoring, troubleshooting, backup/move/upgrade, uninstall, keys and shortcuts (`g h`).
+- Documentation: **Connect apps and agents**, **Run and operate**, **Troubleshooting** and a
+  full **Command reference**; the reference's "Calling the proxy" section now describes
+  providers instead of the old single-upstream variables.
 - **A modern terminal UI**: tabs (`1`-`8`), a live Overview with a credits gauge and traffic
   sparkline, usage gauges on Accounts, live `/` filtering, a `:` command palette, mouse
   support, toasts and a 256-colour theme (ASCII fallback; honours `NO_COLOR`).

@@ -10,6 +10,7 @@
   import { theme } from './lib/theme.svelte';
   import Accounts from './pages/Accounts.svelte';
   import Chains from './pages/Chains.svelte';
+  import Help from './pages/Help.svelte';
   import Integrate from './pages/Integrate.svelte';
   import Overview from './pages/Overview.svelte';
   import Providers from './pages/Providers.svelte';
@@ -23,6 +24,7 @@
     { group: 'Operate', items: [['overview', 'Overview', 'overview', 'o'], ['search', 'Search', 'search', 's'], ['requests', 'Requests', 'requests', 'r']] },
     { group: 'Configure', items: [['providers', 'Providers', 'providers', 'p'], ['accounts', 'Accounts', 'accounts', 'a'], ['chains', 'Chains', 'chains', 'c']] },
     { group: 'Build', items: [['integrate', 'Integrate', 'integrate', 'i'], ['try', 'Raw request', 'raw', 'w'], ['settings', 'Settings', 'settings', 'e']] },
+    { group: 'Support', items: [['help', 'Help', 'help', 'h']] },
   ];
   const pages: NavItem[] = nav.flatMap((g) => g.items);
 
@@ -184,6 +186,7 @@
           {:else if route === 'requests'}<Requests />
           {:else if route === 'search'}<Search />
           {:else if route === 'try'}<TryIt />
+          {:else if route === 'help'}<Help />
           {:else}<Overview />{/if}
         </div>
       {/key}

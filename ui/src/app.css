@@ -325,3 +325,38 @@ pre.out { margin: 0; background: var(--bg-sunk); border: 1px solid var(--line); 
 .warn-text { color: var(--warn); font-size: 12px; }
 .bad-text { color: var(--bad); font-size: 12px; }
 @media (max-width: 920px) { .numbered { grid-template-columns: 1fr; } .numbered .n { font-size: 32px; } }
+
+/* ---- help ------------------------------------------------------------------ */
+.help { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px; align-items: start; }
+.help > * { min-width: 0; }
+.help-toc { position: sticky; top: 24px; }
+.help-toc ul { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 1px; }
+.help-toc li button { width: 100%; text-align: left; height: 32px; padding: 0 10px; border: 0; background: transparent; color: var(--text-2); font: inherit; border-radius: var(--r-1); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+.help-toc li button:hover { background: var(--surface); color: var(--text); }
+.help-toc li button.on { background: var(--surface-2); color: var(--text); font-weight: 600; }
+.help-toc li button.dim { opacity: .4; }
+.help-toc .docs-link { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; padding: 0 10px; }
+.help-toc .search .ico { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+.help-sec { padding: 6px 0 44px; scroll-margin-top: 24px; border-top: 1px solid var(--line); margin-top: 8px; }
+.help-sec:first-child { border-top: 0; margin-top: 0; }
+.help-sec h2 { font: 400 30px/1.1 var(--font-serif); letter-spacing: -.015em; margin-top: 26px; }
+.help-sec .lede { color: var(--text-2); margin: 8px 0 22px; }
+.hp { margin: 0 0 14px; max-width: 70ch; }
+.hh { font: 600 14px/1.3 var(--font-sans); margin: 26px 0 10px; }
+.hl { margin: 0 0 16px; padding-left: 20px; max-width: 70ch; display: grid; gap: 8px; }
+.hl li::marker { color: var(--text-3); }
+.hcode { position: relative; margin: 0 0 18px; }
+.hcode-label { font: 500 12px var(--font-sans); color: var(--text-3); margin-bottom: 6px; }
+.hcode pre.out { padding-right: 48px; max-height: none; }
+.hcopy { position: absolute; right: 8px; bottom: 8px; background: var(--surface); }
+.hcode-label + pre + .hcopy { bottom: 8px; }
+.htable { margin-bottom: 18px; }
+.htable td { vertical-align: top; }
+.htable td.strong { white-space: nowrap; font-weight: 500; }
+.help-sec .note { margin-bottom: 16px; }
+@media (max-width: 920px) {
+  .help { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .help-toc { position: static; }
+  .help-toc ul { grid-auto-flow: column; overflow-x: auto; padding-bottom: 4px; }
+  .help-toc li button { white-space: nowrap; width: auto; }
+}

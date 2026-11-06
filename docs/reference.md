@@ -118,22 +118,27 @@ and rules. `GET /llms.txt` (open) points AI tools at it. See
 
 ## Calling the proxy
 
-Anything under `/v1/` is forwarded; the prefix is stripped.
+A request to `/p/<slug>/<path>` is forwarded to that provider (or chain); `/v1/<path>` goes to the
+default route. The prefix is stripped and the rest is appended to the provider's base URL:
 
 ```
-POST /v1/search   ->   https://google.serper.dev/search
-GET  /v1/news     ->   https://google.serper.dev/news
+GET  /p/serpapi/search?engine=google&q=x   ->   https://serpapi.com/search?engine=google&q=x&api_key=<account key>
+POST /p/serper/search                      ->   https://google.serper.dev/search      (X-API-KEY: <account key>)
 ```
 
-Point it at another provider with two environment variables:
+Providers are added in Snake Charmer, with `serpent providers add`, or `POST /admin/providers`.
+Presets fill in the address and how the key is attached:
 
-| Provider | `UPSTREAM_BASE_URL` | `AUTH_STYLE` |
+| Provider | Base URL | Key is sent as |
 | --- | --- | --- |
-| Serper | `https://google.serper.dev` | `header`, `AUTH_HEADER_NAME=X-API-KEY` |
-| SerpApi | `https://serpapi.com` | `query`, `AUTH_PARAM_NAME=api_key` |
-| ScrapingDog | `https://api.scrapingdog.com` | `query`, `AUTH_PARAM_NAME=api_key` |
-| Valueserp | `https://api.valueserp.com` | `query`, `AUTH_PARAM_NAME=api_key` |
-| Anything with a bearer token | `https://…` | `bearer` |
+| Serper | `https://google.serper.dev` | header `X-API-KEY` |
+| SerpApi | `https://serpapi.com` | query parameter `api_key` |
+| ScrapingDog | `https://api.scrapingdog.com` | query parameter `api_key` |
+| VALUE SERP | `https://api.valueserp.com` | query parameter `api_key` |
+| Brave Search | `https://api.search.brave.com/res/v1` | header `X-Subscription-Token` |
+| Anything else | your URL | header, query parameter or bearer token |
+
+For client examples in several languages, see [Connect apps and agents](connecting.md).
 
 Response headers added to every proxied reply:
 

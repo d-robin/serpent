@@ -23,5 +23,6 @@
         <Icon name="arrow" />
       </a>
     {/each}
+    <p class="faint" style="margin:14px 0 0;font-size:13px">Need a hand? <a href="#/help">Open Help</a> for the quick start, connecting apps and troubleshooting.</p>
   </section>
 {/if}

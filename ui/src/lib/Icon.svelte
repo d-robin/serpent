@@ -25,6 +25,7 @@
     info: '<circle cx="8" cy="8" r="5.8"/><path d="M8 7.2v3.6M8 5.2v.01"/>',
     alert: '<path d="M8 2.6 14.1 13H1.9L8 2.6ZM8 6.6v3M8 11.3v.01"/>',
     key: '<circle cx="5.6" cy="10.4" r="2.6"/><path d="m7.5 8.5 5.6-5.6"/>',
+    help: '<circle cx="8" cy="8" r="5.8"/><path d="M6.3 6.3a1.8 1.8 0 1 1 2.6 1.6c-.6.4-.9.8-.9 1.4M8 11.5v.01"/>',
     dots: '<path d="M3.5 8h.01M8 8h.01M12.5 8h.01"/>',
   };
   let { name, size = 16 }: { name: string; size?: number } = $props();

@@ -10,13 +10,19 @@ spent. **Snake Charmer** is its web interface; `serpent` is its command line and
 | If you want to… | Read |
 | --- | --- |
 | get it running and make your first search | [Getting started](getting-started.md) |
+| call it from an app, a script or an AI agent | [Connect apps and agents](connecting.md) |
+| start, stop, watch logs, back up, upgrade | [Run and operate](operations.md) |
+| fix something that is not working | [Troubleshooting](troubleshooting.md) |
 | understand how the pieces fit and what happens to a request | [Architecture](architecture.md) |
-| use the terminal interface | [Terminal UI](tui.md) |
-| do a specific job (add an account, survive a reboot, move servers, build an app on it) | [Workflows](workflows.md) |
+| do a specific job (add an account, survive a reboot, move servers) | [Workflows](workflows.md) |
 | avoid surprises | [Things to know](important-things.md) |
+| use the terminal interface | [Terminal UI](tui.md) |
+| look up a command | [Command reference](cli.md) |
 | look up an endpoint, setting or exact behaviour | [Reference](reference.md) |
 | run it on a Raspberry Pi, under systemd or in Docker | [Deploying](deploying.md) |
 | pool several accounts with one provider | [Responsible use](responsible-use.md) first |
+
+The same essentials are in the app: open **Help** in Snake Charmer's sidebar.
 
 ## The idea in one picture
 
