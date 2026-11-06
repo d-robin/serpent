@@ -8,3 +8,8 @@ If you redistribute this software, or a work derived from it, in source or
 binary form, you must retain this NOTICE file (or an equivalent attribution
 in your own NOTICE/credits) as required by Section 4(d) of the Apache License,
 Version 2.0.
+
+Bundled fonts (SIL Open Font License 1.1), served from this package, never from a CDN:
+  - Instrument Sans and Instrument Serif, (c) The Instrument Sans / Instrument Serif Project Authors
+  - IBM Plex Mono, (c) IBM Corp.
+Packaged via the @fontsource projects (https://fontsource.org).

@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Snake Charmer redesigned** from the ground up (see `ui/DESIGN.md`): fixed sidebar, serif
+  page titles and hero numerals (Instrument Serif), Instrument Sans and IBM Plex Mono for
+  the interface and data, a restrained graphite and chalk palette with one signal accent,
+  first-class light and dark themes (light by default; dark only when chosen), hairline tables instead of cards, a capacity strip and
+  latency trace on Overview, side sheets for add/edit forms, in-app confirmations, a command
+  palette, keyboard jumps, motion that respects `prefers-reduced-motion`, and a new mark.
+  Fonts are bundled and licensed under the OFL (see NOTICE).
+- `/` now forwards to Snake Charmer (`/ui/`); the old one-page dashboard remains only as the
+  fallback when the UI bundle has not been built.
+
 ### Added
 - **A modern terminal UI**: tabs (`1`-`8`), a live Overview with a credits gauge and traffic
   sparkline, usage gauges on Accounts, live `/` filtering, a `:` command palette, mouse

@@ -1,8 +1,10 @@
 # Snake Charmer
 
-The admin UI for [Serpent](../README.md): providers, accounts, fallback chains, runtime
-settings and a "Try it" console. Svelte 5 + Vite + TypeScript, plain CSS, no CDN and no web
-fonts, so it works on an offline LAN.
+The admin UI for [Serpent](../README.md): search, request history, providers, accounts,
+fallback chains, runtime settings, an integration contract for AI assistants and a raw
+request console. Svelte 5 + Vite + TypeScript, plain CSS, a command palette (`Ctrl/Cmd K`)
+and keyboard navigation (`g` then a letter). Fonts are bundled (no CDN), so it works on an
+offline LAN. **Read [DESIGN.md](DESIGN.md) before changing the look.**
 
 The router serves the built bundle at **`/ui/`** (e.g. `http://127.0.0.1:8971/ui/`).
 

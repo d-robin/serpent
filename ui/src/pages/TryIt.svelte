@@ -1,5 +1,7 @@
 <script lang="ts">
   import { authHeaders } from '../lib/api';
+  import Icon from '../lib/Icon.svelte';
+  import PageHead from '../lib/PageHead.svelte';
   import { store } from '../lib/store.svelte';
 
   const s = $derived(store.status!);
@@ -9,7 +11,8 @@
     ...s.chains.map((c) => ({ value: `/p/${c.slug}/`, label: `/p/${c.slug}/… (chain)` })),
   ]);
   // SerpApi is GET with the query in the URL (read once: these are only starting values).
-  const getStyle = store.status?.providers.find((p) => p.slug === store.status?.default_route)?.preset === 'serpapi';  let base = $state('/v1/');
+  const getStyle = store.status?.providers.find((p) => p.slug === store.status?.default_route)?.preset === 'serpapi';
+  let base = $state('/v1/');
   let method = $state(getStyle ? 'GET' : 'POST');
   let tail = $state(getStyle ? 'search?engine=google&q=coffee+shops+austin' : 'search');
   let key = $state('');
@@ -36,10 +39,7 @@
       const text = await res.text();
       let pretty = text;
       try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch { /* not JSON */ }
-      result = {
-        status: res.status, ms: Math.round(performance.now() - t0),
-        headers: [...res.headers.entries()].filter(([k]) => SHOWN.test(k)), text: pretty,
-      };
+      result = { status: res.status, ms: Math.round(performance.now() - t0), headers: [...res.headers.entries()].filter(([k]) => SHOWN.test(k)), text: pretty };
       void store.refresh();
     } catch (err) {
       error = err instanceof Error ? err.message : 'request failed';
@@ -47,26 +47,25 @@
   }
 </script>
 
-<section class="stack">
-  <h2>Try it</h2>
-  <p class="muted" style="margin:0">Sends a real request through the router. <strong>It spends a credit</strong> on the chosen provider.</p>
-  <form class="card form" onsubmit={send}>
-    <label class="field">Route<select bind:value={base}>{#each routes as r}<option value={r.value}>{r.label}</option>{/each}</select></label>
-    <label class="field">Method<select bind:value={method}>{#each ['POST', 'GET'] as m}<option>{m}</option>{/each}</select></label>
-    <label class="field">Path<input bind:value={tail} placeholder="search" /></label>
-    <label class="field">Client key<input type="password" autocomplete="off" bind:value={key} placeholder={s.auth_enabled ? 'client or admin key' : 'not required'} /></label>
-    {#if method !== 'GET'}<label class="field wide">JSON body<textarea rows="3" bind:value={body} style="font-family:var(--mono)"></textarea></label>{/if}
-    <div class="wide actions" style="justify-content:space-between;align-items:center">
-      <code>{method} {url}</code><button class="primary" disabled={busy}>{busy ? 'Sending…' : 'Send request'}</button>
-    </div>
-  </form>
+<PageHead title="Raw request" lede="Send any request through the router and see exactly what comes back. It spends a credit on the chosen provider." />
 
-  {#if error}<div class="banner bad" role="alert">{error}</div>{/if}
-  {#if result}
-    <div class="card stack" aria-live="polite">
-      <div style="display:flex;gap:10px;align-items:center"><span class="pill {result.status < 400 ? 'ok' : 'bad'}">{result.status}</span><span class="muted">{result.ms} ms</span></div>
-      <dl class="kv">{#each result.headers as [k, v]}<dt>{k}</dt><dd>{v}</dd>{/each}</dl>
-      <pre class="out">{result.text || '(empty body)'}</pre>
-    </div>
-  {/if}
-</section>
+<form class="form" onsubmit={send}>
+  <label class="field">Route<select bind:value={base}>{#each routes as r}<option value={r.value}>{r.label}</option>{/each}</select></label>
+  <label class="field">Client key<input type="password" class="mono-input" autocomplete="off" bind:value={key} placeholder={s.auth_enabled ? 'client or admin key' : 'not required'} /></label>
+  <label class="field">Method<select bind:value={method}>{#each ['POST', 'GET'] as m}<option>{m}</option>{/each}</select></label>
+  <label class="field">Path<input class="mono-input" bind:value={tail} placeholder="search" /></label>
+  {#if method !== 'GET'}<label class="field wide">JSON body<textarea class="mono-input" rows="3" bind:value={body}></textarea></label>{/if}
+  <div class="wide row" style="justify-content:space-between">
+    <code style="background:transparent;border:0;padding:0;color:var(--text-2)">{method} {url}</code>
+    <button class="btn primary" disabled={busy}>{busy ? 'Sending…' : 'Send request'}</button>
+  </div>
+</form>
+
+{#if error}<div class="note bad" role="alert" style="margin-top:22px"><Icon name="alert" /><span>{error}</span></div>{/if}
+{#if result}
+  <div aria-live="polite">
+    <div class="resp-head"><span class="code {result.status < 400 ? 'ok' : 'bad'}" style="font-size:18px">{result.status}</span><span class="faint">{result.ms} ms</span></div>
+    <dl class="ledger" style="margin-bottom:18px">{#each result.headers as [k, v]}<div><dt class="m">{k}</dt><dd class="m">{v}</dd></div>{/each}</dl>
+    <pre class="out">{result.text || '(empty body)'}</pre>
+  </div>
+{/if}

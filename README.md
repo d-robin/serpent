@@ -33,8 +33,9 @@ your app ──► /p/serper/…  ──►  rotation  ──► Serper   (accou
   speaks one provider's API.
 - **Built for AI-assisted development.** `GET /v1/contract` describes how to call your
   router, generated from your live setup; the Integrate tab hands it to an AI assistant.
-- **Snake Charmer.** A web UI to add providers and accounts, build chains, tune
-  rotation and try requests. Bundled, offline, no CDN.
+- **Snake Charmer.** A designed, keyboard-friendly web UI (light and dark, command palette)
+  to search, watch traffic, manage providers, accounts and chains, and tune rotation.
+  Bundled, offline, no CDN.
 - **Boring to run.** Three Python dependencies, one SQLite file, about 60 MB RSS.
   Runs on a Raspberry Pi, in Docker, or under systemd.
 - **Safe by default.** Provider keys never leave the server, loopback bind, role

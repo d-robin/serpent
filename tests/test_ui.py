@@ -13,8 +13,9 @@ def test_ui_route_always_answers(make_client):
     assert "Snake Charmer" in r.text or "<div id=\"app\">" in r.text
 
 
-def test_dashboard_links_to_ui(make_client):
+def test_root_goes_to_the_ui(make_client):
     import httpx
 
     client = make_client(lambda req: httpx.Response(200, json={}))
-    assert 'href="/ui/"' in client.get("/").text
+    r = client.get("/", follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == "/ui/"

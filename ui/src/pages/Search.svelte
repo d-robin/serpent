@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { authHeaders } from '../lib/api';
-  import { store } from '../lib/store.svelte';
   import { KINDS, buildPath, type Kind } from '../lib/engines';
+  import Icon from '../lib/Icon.svelte';
+  import PageHead from '../lib/PageHead.svelte';
   import { extractHits, fillTemplate, host, type Hit } from '../lib/results';
+  import { store } from '../lib/store.svelte';
 
   const s = $derived(store.status!);
   const routes = $derived([
@@ -30,20 +33,21 @@
   let showRaw = $state(false);
   let meta = $state<{ status: number; ms: number; via: string } | null>(null);
   let searched = $state(false);
+  let input: HTMLInputElement;
 
+  onMount(() => input?.focus());
   $effect(() => { if (!key) key = store.key; });
   $effect(() => {
     try { localStorage.setItem(SAVED, JSON.stringify({ base, method, path, template, kindId })); } catch { /* private mode */ }
   });
 
-  // Which provider answers the chosen route, and what kinds of search it knows.
   const slug = $derived(base === '/v1/' ? s.default_route : base.replace(/^\/p\/|\/$/g, ''));
   const preset = $derived(s.providers.find((p) => p.slug === slug)?.preset ?? '');
   const kinds = $derived<Kind[]>(KINDS[preset] ?? []);
   const kind = $derived(kinds.find((k) => k.id === kindId) ?? kinds[0]);
   const noProvider = $derived(s.providers.length === 0);
   const noAccount = $derived(!noProvider && s.accounts_total === 0);
-  const needsKey = $derived(s.auth_enabled && !key && store.role === "none");
+  const needsKey = $derived(s.auth_enabled && !key && store.role === 'none');
 
   async function search(e: SubmitEvent) {
     e.preventDefault();
@@ -68,14 +72,13 @@
       let data: unknown = null;
       try { data = JSON.parse(text); raw = JSON.stringify(data, null, 2); } catch { raw = text; }
       meta = {
-        status: res.status,
-        ms: Math.round(performance.now() - t0),
+        status: res.status, ms: Math.round(performance.now() - t0),
         via: res.headers.get('x-router-account') ?? res.headers.get('x-router-provider') ?? '',
       };
       if (!res.ok) {
-        error = res.status === 401 ? 'The router needs a key. Sign in, or paste a client key under Options.'
+        error = res.status === 401 ? 'The router needs a key. Sign in, or paste a client key under Request options.'
           : res.status === 503 ? 'Nothing is set up to answer yet. Add a provider and an account first.'
-          : `The search failed (HTTP ${res.status}). Open "Raw response" for details.`;
+          : `The search failed (HTTP ${res.status}). The raw response below has the details.`;
         showRaw = true;
       } else {
         hits = extractHits(data);
@@ -87,99 +90,81 @@
   }
 </script>
 
-<section class="stack search">
-  <h2>Search</h2>
+<PageHead title="Search" lede="Ask through the router and read what comes back. Each search is a real call and uses one credit." />
 
+<div class="stack" style="gap:22px">
   {#if noProvider}
-    <div class="banner warn">Nothing to search with yet. <a href="#/providers">Add a provider</a>, then an <a href="#/accounts">account</a> with its API key.</div>
+    <div class="note warn"><Icon name="info" /><span>Nothing to search with yet. <a href="#/providers">Add a provider</a>, then an <a href="#/accounts">account</a> with its API key.</span></div>
   {:else if noAccount}
-    <div class="banner warn">A provider is set up, but it has no API key yet. <a href="#/accounts">Add an account</a>.</div>
+    <div class="note warn"><Icon name="info" /><span>A provider is set up, but it has no API key yet. <a href="#/accounts">Add an account</a>.</span></div>
   {/if}
 
   {#if kinds.length}
-    <div class="kinds" role="radiogroup" aria-label="Kind of search">
-      {#each kinds as k}
-        <button type="button" role="radio" aria-checked={kind?.id === k.id} class:on={kind?.id === k.id}
-                onclick={() => (kindId = k.id)}>{k.label}</button>
-      {/each}
+    <div class="seg" role="radiogroup" aria-label="Kind of search" style="justify-self:start;flex-wrap:wrap">
+      {#each kinds as k}<button type="button" role="radio" aria-checked={kind?.id === k.id} onclick={() => (kindId = k.id)}>{k.label}</button>{/each}
     </div>
   {/if}
 
-  <form class="searchbox" onsubmit={search} role="search">
-    <input type="search" bind:value={query} placeholder="What do you want to look up?" aria-label="Search query"
-           disabled={noProvider || noAccount} />
-    <button class="primary" disabled={busy || !query.trim() || noProvider || noAccount}>{busy ? 'Searching…' : 'Search'}</button>
+  <form class="ask" onsubmit={search} role="search">
+    <Icon name="search" size={20} />
+    <input bind:this={input} type="search" bind:value={query} placeholder="What do you want to look up?" aria-label="Search query" disabled={noProvider || noAccount} />
+    <button class="btn primary go" disabled={busy || !query.trim() || noProvider || noAccount}>{busy ? 'Searching…' : 'Search'}</button>
   </form>
-  <p class="muted note">Each search is a real request and uses one credit from your quota.</p>
 
-  <details class="card opts">
-    <summary>Options</summary>
+  <details class="opts">
+    <summary>Request options</summary>
     <div class="form">
       <label class="field">Search with<select bind:value={base}>{#each routes as r}<option value={r.value}>{r.label}</option>{/each}</select></label>
       <label class="field">Client key
-        <input type="password" autocomplete="off" bind:value={key} placeholder={s.auth_enabled ? 'client or admin key' : 'not required'} />
-      </label>
+        <input type="password" class="mono-input" autocomplete="off" bind:value={key} placeholder={s.auth_enabled ? 'client or admin key' : 'not required'} /></label>
       {#if kinds.length}
-        <p class="muted wide" style="margin:0">Request details are filled in for {preset}. Choose the kind of search above the box.</p>
+        <p class="muted wide" style="font-size:13px">Request details are filled in for {preset}. Pick the kind of search above the box.</p>
       {:else}
-      <label class="field">Method<select bind:value={method}>{#each ['POST', 'GET'] as m}<option>{m}</option>{/each}</select></label>
-      <label class="field">Path<input bind:value={path} placeholder="search" /></label>
-      {#if method === 'POST'}
-        <label class="field wide">Request body, <code>{'{query}'}</code> is replaced by your search
-          <textarea rows="2" bind:value={template} style="font-family:var(--mono)"></textarea>
-        </label>
-      {:else}
-        <p class="muted wide" style="margin:0">Your search is sent as <code>?q=…</code>.</p>
+        <label class="field">Method<select bind:value={method}>{#each ['POST', 'GET'] as m}<option>{m}</option>{/each}</select></label>
+        <label class="field">Path<input class="mono-input" bind:value={path} placeholder="search" /></label>
+        {#if method === 'POST'}
+          <label class="field wide">Request body <span class="hint"><code>{'{query}'}</code> is replaced by your search</span>
+            <textarea class="mono-input" rows="2" bind:value={template}></textarea></label>
+        {:else}
+          <p class="muted wide" style="font-size:13px">Your search is sent as <code>?q=…</code>.</p>
+        {/if}
+        <p class="faint wide" style="font-size:13px">Providers differ in what they expect. Set this once to match yours; it is remembered in this browser.</p>
       {/if}
-      {/if}
-      <p class="muted wide" style="margin:0">Providers differ in what they expect. Set this once to match yours; it is remembered in this browser.</p>
     </div>
   </details>
 
-  {#if needsKey}<div class="banner warn">This router needs a key. Sign in (top right) or add a client key under Options.</div>{/if}
-  {#if error}<div class="banner bad" role="alert">{error}</div>{/if}
+  {#if needsKey}<div class="note warn"><Icon name="alert" /><span>This router needs a key. Sign in from the sidebar, or add a client key under Request options.</span></div>{/if}
+  {#if error}<div class="note bad" role="alert"><Icon name="alert" /><span>{error}</span></div>{/if}
 
-  <div aria-live="polite" class="stack">
-    {#if meta && !error}
-      <p class="muted note">
-        {hits.length ? `${hits.length} result${hits.length === 1 ? '' : 's'}` : 'No results to show'} · {meta.ms} ms{meta.via ? ` · via ${meta.via}` : ''}
-      </p>
-    {/if}
-    {#each hits as h}
-      <article class="hit">
-        <span class="muted host">{host(h.url)}</span>
-        <a class="title" href={h.url} target="_blank" rel="noopener noreferrer">{h.title}</a>
-        {#if h.extra}<span class="extra">{h.extra}</span>{/if}
-        {#if h.snippet}<p>{h.snippet}</p>{/if}
-      </article>
-    {/each}
-    {#if searched && !busy && !error && meta && !hits.length}
-      <p class="muted">The reply did not look like a list of results. Open "Raw response" to see what came back.</p>
+  <div aria-live="polite">
+    {#if busy}
+      <div class="stack" style="gap:26px;margin-top:8px">
+        {#each [0, 1, 2] as i}<div class="stack" style="gap:10px"><div class="skel" style="height:11px;width:{120 + i * 30}px"></div><div class="skel" style="height:20px;width:{60 - i * 8}%"></div><div class="skel" style="height:13px;width:{85 - i * 10}%"></div></div>{/each}
+      </div>
+    {:else}
+      {#if meta && !error}
+        <p class="faint" style="font-size:13px;margin-bottom:4px">
+          {hits.length ? `${hits.length} result${hits.length === 1 ? '' : 's'}` : 'No results to show'}
+          · {meta.ms} ms{meta.via ? ` · answered by ${meta.via}` : ''}</p>
+      {/if}
+      {#each hits as h, i (h.url + i)}
+        <article class="hit" style="animation-delay:{i * 30}ms">
+          <span class="where">{host(h.url)}</span><br />
+          <a class="title" href={h.url} target="_blank" rel="noopener noreferrer">{h.title}</a>
+          {#if h.extra}<div class="extra">{h.extra}</div>{/if}
+          {#if h.snippet}<p>{h.snippet}</p>{/if}
+        </article>
+      {/each}
+      {#if searched && !error && meta && !hits.length}
+        <p class="muted" style="margin-top:12px">The reply did not look like a list of results. Open the raw response to see what came back.</p>
+      {/if}
     {/if}
   </div>
 
   {#if raw}
-    <details bind:open={showRaw}>
-      <summary class="muted">Raw response{meta ? ` (HTTP ${meta.status})` : ''}</summary>
-      <pre class="out">{raw}</pre>
+    <details class="fold" bind:open={showRaw}>
+      <summary>Raw response{meta ? ` · HTTP ${meta.status}` : ''}</summary>
+      <div class="inner"><pre class="out">{raw}</pre></div>
     </details>
   {/if}
-</section>
-
-<style>
-  .search { max-width: 760px; }
-  .searchbox { display: flex; gap: 8px; }
-  .searchbox input { flex: 1; font-size: 17px; padding: 12px 14px; }
-  .searchbox button { padding: 0 22px; }
-  .kinds { display: flex; flex-wrap: wrap; gap: 6px; }
-  .kinds button { border-radius: 999px; padding: 4px 14px; min-height: 30px; }
-  .kinds button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
-  .hit .extra { display: block; font-weight: 600; margin-top: 2px; }
-  .note { margin: 0; font-size: 13px; }
-  .opts summary { cursor: pointer; }
-  .opts .form { margin-top: 12px; }
-  .hit { padding: 12px 0; border-bottom: 1px solid var(--line); }
-  .hit .host { font-size: 12px; display: block; }
-  .hit .title { font-size: 17px; font-weight: 600; }
-  .hit p { margin: 4px 0 0; color: var(--dim); }
-</style>
+</div>

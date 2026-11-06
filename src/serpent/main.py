@@ -13,7 +13,13 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 
 from . import (
@@ -305,8 +311,14 @@ def create_app(
         )
         return PlainTextResponse("\n".join(lines) + "\n")
 
+    ui_dir = Path(__file__).parent / "ui_dist"
+
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def home(request: Request):
+        # Snake Charmer is the interface. The old one-page dashboard is only the fallback
+        # for a checkout whose UI bundle has not been built.
+        if (ui_dir / "index.html").is_file():
+            return RedirectResponse("/ui/", status_code=307)
         if not settings.dashboard_public:
             security.require(request, "read")
         return HTMLResponse(dashboard.PAGE)
@@ -1119,7 +1131,6 @@ def create_app(
         return last
 
     # ---- Snake Charmer (admin UI) ---------------------------------------
-    ui_dir = Path(__file__).parent / "ui_dist"
     if (ui_dir / "index.html").is_file():
         app.mount("/ui", StaticFiles(directory=ui_dir, html=True), name="ui")
     else:

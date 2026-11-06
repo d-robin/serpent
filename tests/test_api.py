@@ -171,10 +171,8 @@ def test_quota_check_accepts_query_param(make_client):
 def test_dashboard_is_public_and_renders_settings(make_client):
     client = make_client()
     _add(client, label="visible")
-    page = client.get("/")
-    assert page.status_code == 200
-    assert "SERP" in page.text
-    assert "auto-refresh" in page.text
+    page = client.get("/", follow_redirects=False)
+    assert page.status_code == 307 and page.headers["location"] == "/ui/"  # Snake Charmer is the UI
     status = client.get("/api/status").json()
     assert status["accounts"][0]["label"] == "visible"
     assert status["strategy"] == "most_remaining"
@@ -183,9 +181,7 @@ def test_dashboard_is_public_and_renders_settings(make_client):
 
 def test_private_dashboard_requires_a_key(make_client, settings):
     client = make_client(settings_override=replace(settings, dashboard_public=False))
-    assert client.get("/").status_code == 401
     assert client.get("/api/status").status_code == 401
-    assert client.get("/", headers=READ).status_code == 200
     assert client.get("/api/status", headers=READ).status_code == 200
 
 

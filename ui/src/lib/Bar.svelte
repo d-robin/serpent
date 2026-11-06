@@ -4,6 +4,6 @@
   const p = $derived(pct(used, limit));
 </script>
 
-<div class="bar {barClass(p)}" role="progressbar" aria-label={label} aria-valuemin="0" aria-valuemax={limit} aria-valuenow={used}>
+<div class="gauge {barClass(p)}" role="progressbar" aria-label={label} aria-valuemin="0" aria-valuemax={limit} aria-valuenow={used}>
   <i style="width:{p}%"></i>
 </div>

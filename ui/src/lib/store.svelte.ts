@@ -11,7 +11,10 @@ class Store {
   hints = $state<Record<number, string>>({});
   loading = $state(true);
   error = $state('');
+  /** A one-shot request from the palette to a page (e.g. open its add form). */
+  intent = $state('');
   toasts = $state<{ id: number; text: string; bad: boolean }[]>([]);
+  dialog = $state<{ title: string; body: string; label: string; danger: boolean; resolve: (ok: boolean) => void } | null>(null);
   private timer: ReturnType<typeof setInterval> | undefined;
   private nextToast = 1;
 
@@ -72,6 +75,13 @@ class Store {
     const id = this.nextToast++;
     this.toasts = [...this.toasts, { id, text, bad }];
     setTimeout(() => { this.toasts = this.toasts.filter((t) => t.id !== id); }, bad ? 6000 : 3000);
+  }
+
+  /** An in-app confirmation (never the browser's own box). Resolves true when confirmed. */
+  ask(title: string, body = '', label = 'Confirm', danger = false): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.dialog = { title, body, label, danger, resolve: (ok) => { this.dialog = null; resolve(ok); } };
+    });
   }
 
   /** Run a mutation, toast the outcome, refresh. Returns true on success. */
