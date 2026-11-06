@@ -21,6 +21,7 @@ import io
 import locale
 import os
 import sys
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -159,10 +160,10 @@ def glyphs(uni: bool) -> dict[str, str]:
     if uni:
         return {"dot": "●", "ring": "○", "full": "█", "empty": "░", "tl": "╭", "tr": "╮", "bl": "╰",
                 "br": "╯", "h": "─", "v": "│", "sep": "›", "bar": "▌", "thumb": "┃", "track": "│",
-                "spark": "▁▂▃▄▅▆▇█", "brand": "◆"}
+                "spark": "▁▂▃▄▅▆▇█", "brand": "◆", "spin": "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏", "tick": "✓"}
     return {"dot": "*", "ring": "o", "full": "#", "empty": "-", "tl": "+", "tr": "+", "bl": "+",
             "br": "+", "h": "-", "v": "|", "sep": ">", "bar": ">", "thumb": "#", "track": "|",
-            "spark": "_.-~^", "brand": "*"}
+            "spark": "_.-~^", "brand": "*", "spin": "|/-\\", "tick": "+"}
 
 
 def bar(frac: float, width: int, g: dict[str, str]) -> list[Seg]:
@@ -525,24 +526,91 @@ class App:
         self.put(h - 2, max(0, w - len(label) - 2), label, "chip")
         self.scr.refresh()
 
-    def run_cli(self, title: str, fn: Callable[[], object], *, show: bool = True) -> bool:
-        """Run a CLI function, capturing what it prints; errors become a message box."""
+    def draw_progress(self, title: str, steps: list[str], elapsed: float, finished: bool, ok: bool) -> None:
+        """A centred panel: ticked steps, the current one spinning, a moving bar and the time."""
+        self.render()
+        h, w = self.scr.getmaxyx()
+        g = self.g
+        visible = steps[-6:]
+        width = min(w - 6, max(60, len(title) + 10, *(len(x) + 10 for x in visible)))
+        height = max(1, len(visible)) + 6
+        y0, x0 = max(0, (h - height) // 2), max(0, (w - width) // 2)
+        self.box(y0, x0, height, width, title, "bad" if finished and not ok else "accent")
+        spin = g["spin"][int(elapsed * 12) % len(g["spin"])]
+        y = y0 + 2
+        if not visible:
+            self.puts(y, x0 + 3, [(spin + "  ", "accent"), ("Working…", "base")], width - 6)
+        for i, step in enumerate(visible):
+            if finished or i < len(visible) - 1:
+                self.puts(y + i, x0 + 3, [(g["tick"] + "  ", "good" if ok or i < len(visible) - 1 else "bad"),
+                                          (step, "dim")], width - 6)
+            else:
+                self.puts(y + i, x0 + 3, [(spin + "  ", "accent"), (step, "base")], width - 6)
+        bar_w = width - 6
+        by = y0 + height - 3
+        if finished:
+            self.puts(by, x0 + 3, [(g["full"] * bar_w, "good" if ok else "bad")], bar_w)
+        else:
+            pos = int(elapsed * 24) % (bar_w + 12) - 12
+            segs: list[Seg] = []
+            for i in range(bar_w):
+                on = pos <= i < pos + 12
+                segs.append((g["full"] if on else g["empty"], "accent" if on else "dim"))
+            self.puts(by, x0 + 3, segs, bar_w)
+        status = ("Done" if ok else "Stopped with an error") if finished else "Working, please wait"
+        self.put(y0 + height - 2, x0 + 3, status, "dim", width - 16)
+        stamp = f"{elapsed:.1f} s"
+        self.put(y0 + height - 2, x0 + width - len(stamp) - 3, stamp, "base")
+        self.scr.refresh()
+
+    def run_task(self, title: str, fn: Callable[[], object], *, show: bool = True,
+                 ok_toast: str | None = None) -> bool:
+        """Run ``fn`` in the background and show what it is doing, live.  ``ok_toast`` may use {took}.
+
+        Steps come from ``cli.progress()``; whatever it prints is captured.  On success the
+        captured output is shown in a box (``show``) or a toast; failures always show their text.
+        """
         out, err = io.StringIO(), io.StringIO()
-        self.busy(f"{title}…")
-        ok = True
-        try:
-            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                rc = fn()
-            ok = not rc
-        except cli.CliError as exc:
-            ok, err = False, io.StringIO(str(exc))
-        except Exception as exc:  # a library error must not take the screen down
-            ok, err = False, io.StringIO(f"{type(exc).__name__}: {exc}")
-        text = (out.getvalue() + err.getvalue()).strip()
-        if show or not ok:
+        steps: list[str] = []
+        state: dict = {"ok": True, "done": False, "error": ""}
+
+        def work() -> None:
+            previous, cli.PROGRESS = cli.PROGRESS, steps.append
+            try:
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    state["ok"] = not fn()
+            except cli.CliError as exc:
+                state["ok"], state["error"] = False, str(exc)
+            except Exception as exc:  # a library error must not take the screen down
+                state["ok"], state["error"] = False, f"{type(exc).__name__}: {exc}"
+            finally:
+                cli.PROGRESS = previous
+                state["done"] = True
+
+        began = time.monotonic()
+        worker = threading.Thread(target=work, daemon=True)
+        worker.start()
+        while not state["done"]:
+            self.draw_progress(title, list(steps), time.monotonic() - began, False, True)
+            self.scr.timeout(80)
+            self.scr.getch()  # keys pressed meanwhile are ignored (and dropped below)
+        worker.join()
+        took = time.monotonic() - began
+        ok = bool(state["ok"])
+        self.draw_progress(title, list(steps), took, True, ok)
+        time.sleep(0.45 if ok else 0.8)  # let the finished state register
+        curses.flushinp()
+        text = (out.getvalue() + err.getvalue() + state["error"]).strip()
+        if ok and not show:
+            self.toast((ok_toast or title + ": done in {took:.1f} s").format(took=took))
+        elif show or not ok:
             self.message(title if ok else f"{title} - failed", text or "done",
                          style="accent" if ok else "bad")
         return ok
+
+    def run_cli(self, title: str, fn: Callable[[], object], *, show: bool = True) -> bool:
+        """Run a CLI function with live progress; its printed output becomes the result text."""
+        return self.run_task(title, fn, show=show)
 
     def guarded(self, fn: Callable[[], object], ok_msg: str | None = None) -> bool:
         """Call a library function; show the error text from the usual library errors."""
@@ -813,7 +881,9 @@ class App:
         ns = cli._ns(host=None, port=None, workers=None, wait=30)
         fn = {"start": lambda: cli.cmd_start(self.home, ns), "stop": lambda: cli.cmd_stop(self.home),
               "restart": lambda: cli.cmd_restart(self.home, ns)}[what]
-        self.run_cli(what.capitalize(), fn)
+        titles = {"start": "Starting the server", "stop": "Stopping the server", "restart": "Restarting the server"}
+        done = {"start": "Server started", "stop": "Server stopped", "restart": "Server restarted"}
+        self.run_task(titles[what], fn, show=False, ok_toast=done[what] + " in {took:.1f} s")
 
     def open_browser(self) -> None:
         link = keys.signin_link(self.home)
@@ -1292,13 +1362,7 @@ class App:
                 self.server("restart")
 
     def m_backup(self) -> None:
-        try:
-            self.busy("backing up…")
-            target = cli.backup_db(self.home)
-        except Exception as exc:
-            self.message("Backup failed", f"{type(exc).__name__}: {exc}", style="bad")
-            return
-        self.message("Backed up", [str(target), "", "It contains your provider keys: keep it as private as .env."])
+        self.run_task("Backing up the database", lambda: cli.cmd_backup(self.home, cli._ns()))
 
     def m_reset_all(self) -> None:
         from . import quota
@@ -1388,9 +1452,15 @@ class App:
             if typed != "delete":
                 self.toast("cancelled: nothing was changed", "bad")
                 return
-        self.busy("removing…")
-        uninstall.execute(inv)
-        problems = uninstall.verify(inv)
+        outcome = {"problems": 0}
+
+        def work() -> int:
+            uninstall.execute(inv)
+            outcome["problems"] = uninstall.verify(inv)
+            return 0
+
+        self.run_task("Uninstalling Serpent", work, show=False, ok_toast="Removed")
+        problems = outcome["problems"]
         result: list = []
         for i in inv.items:
             result.append([("OK   " if i.ok else "FAIL ", "good" if i.ok else "bad"), (f"{i.what}: ", "base"),

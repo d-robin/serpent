@@ -29,6 +29,7 @@ from .cli import (
     clear_run_files,
     eprint,
     pid_alive,
+    progress,
     read_pid,
     read_port,
     say,
@@ -259,6 +260,7 @@ def execute(inv: Inventory) -> None:
     # Stop first, so nothing is writing while files are removed.
     for item in inv.items:
         if item.action == STOP and inv.running_pid:
+            progress("Stopping the server")
             _terminate(inv.running_pid, 10)
             clear_run_files(home)
     # The virtualenv holds the interpreter that is running us: remove it last.
@@ -266,6 +268,7 @@ def execute(inv: Inventory) -> None:
     for item in ordered:
         if item.action != REMOVE:
             continue
+        progress(f"Removing {item.what}")
         try:
             if item.path is not None:
                 _rm(item.path)
@@ -275,6 +278,7 @@ def execute(inv: Inventory) -> None:
 
 def verify(inv: Inventory) -> int:
     """Look at everything again; return the number of problems."""
+    progress("Checking that everything is gone")
     problems = 0
     for item in inv.items:
         if item.action == STOP:

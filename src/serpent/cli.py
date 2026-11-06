@@ -66,6 +66,17 @@ def eprint(text: str) -> None:
     print(text, file=sys.stderr)
 
 
+# A front end (the terminal UI) can set this to learn what a long operation is doing right now.
+# It is a no-op for the plain command line, whose output is unchanged.
+PROGRESS: Callable[[str], None] | None = None
+
+
+def progress(message: str) -> None:
+    hook = PROGRESS
+    if hook is not None:
+        hook(message)
+
+
 def table(rows: Sequence[Sequence[object]], header: Sequence[str]) -> str:
     cells = [[str(c) for c in row] for row in rows]
     widths = [len(h) for h in header]
@@ -300,8 +311,18 @@ def read_pid(home: Home) -> int | None:
 
 
 def pid_alive(pid: int | None) -> bool:
+    """Is ``pid`` a running process?  A child of ours that has exited but was never reaped is a
+    zombie: ``kill(pid, 0)`` still succeeds for it, which made ``stop`` wait out its whole grace
+    period (the terminal UI is the parent of a server it started).  Reap it here instead."""
     if not pid:
         return False
+    try:
+        done, _status = os.waitpid(pid, os.WNOHANG)
+    except OSError:
+        pass  # not our child (ChildProcessError): fall through to the signal check
+    else:
+        if done:
+            return False
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -459,11 +480,13 @@ def cmd_start(home: Home, args: argparse.Namespace) -> int:
         say("\nstop it: serpent stop    restart: serpent restart")
         say("a second install in another folder will start on its own port")
         return 1
+    progress("Preparing the install folder")
     clear_run_files(home)
     home.ensure()
     rotate_log(home)
     host = pick_host(args.host)
     base = base_port(home, args.port)
+    progress(f"Looking for a free port from {base}")
     chosen = find_port(base, host)
     if chosen is None:
         reason = f"no free port in {base}..{base + PORT_SCAN - 1}"
@@ -478,6 +501,7 @@ def cmd_start(home: Home, args: argparse.Namespace) -> int:
         say(f"{why}; using {chosen}")
 
     level = os.environ.get("LOG_LEVEL", read_env_file(home.env_file).get("LOG_LEVEL", "info")).lower()
+    progress(f"Launching the server on port {chosen}")
     with home.log.open("ab") as logfh:
         proc = subprocess.Popen(
             uvicorn_cmd(host, chosen, workers=args.workers, level=level),
@@ -489,6 +513,7 @@ def cmd_start(home: Home, args: argparse.Namespace) -> int:
     url = f"http://{probe_host(host)}:{chosen}"
 
     code = 0
+    progress("Waiting for it to answer its health check")
     for _ in range(int(args.wait * 2)):
         if proc.poll() is not None:
             break
@@ -502,6 +527,7 @@ def cmd_start(home: Home, args: argparse.Namespace) -> int:
 
     from .uninstall import remember_port
     remember_port(home, chosen)
+    progress(f"Healthy: serving on {url}")
     logline(home, f"started pid={proc.pid} host={host} port={chosen} url={url}")
     say(f"started  pid {proc.pid} on {url}")
     say(f"ui         {url}/")
@@ -567,8 +593,12 @@ def cmd_stop(home: Home, args: argparse.Namespace | None = None) -> int:
         say("not running")
         return 0
     logline(home, f"stop requested pid={pid}")
+    progress(f"Found the server (pid {pid})")
+    progress("Asking it to finish and shut down")
+    began = time.monotonic()
     forced = _terminate(pid, 10)  # type: ignore[arg-type]
     if forced:
+        progress("It did not stop in 10 s: forcing it")
         record_fault(home, "stop-forced", "the process ignored SIGTERM for 10s",
                      "a request was probably stuck; check the upstream timeout")
         logline(home, f"killed pid={pid} after 10s")
@@ -576,6 +606,8 @@ def cmd_stop(home: Home, args: argparse.Namespace | None = None) -> int:
     else:
         logline(home, f"stopped pid={pid}")
         say("stopped")
+        progress(f"Server stopped after {time.monotonic() - began:.1f} s")
+    progress("Cleaning up its runtime files")
     clear_run_files(home)
     return 0
 
@@ -863,6 +895,7 @@ def report(rows: list[Check], url: str, args: argparse.Namespace, label: str = "
 
 
 def cmd_health(home: Home, args: argparse.Namespace) -> int:
+    progress("Asking the server and the database")
     url, rows = collect_health(home)
     return report(rows, url, args)
 
@@ -901,8 +934,11 @@ def environment_checks(home: Home) -> list[Check]:
 
 
 def cmd_doctor(home: Home, args: argparse.Namespace) -> int:
+    progress("Checking Python, packages, .env, keys and folders")
+    envrows = environment_checks(home)
+    progress("Asking the server and the database")
     url, rows = collect_health(home)
-    rows = environment_checks(home) + rows
+    rows = envrows + rows
     return report(rows, url, args, label="doctor")
 
 
@@ -1022,7 +1058,10 @@ def _verify_endpoints(base: str, ok: Callable[[str], None], fail: Callable[[str]
 
 
 def cmd_verify(home: Home, args: argparse.Namespace) -> int:
-    return run_verify(home, quiet=args.quiet)
+    progress("Booting a scratch copy on a throwaway database")
+    code = run_verify(home, quiet=args.quiet)
+    progress("Checked the endpoints" if not code else "A check failed")
+    return code
 
 
 # ------------------------------------------------------------------- init ---
@@ -1437,11 +1476,13 @@ def backup_db(home: Home) -> Path:
 
     from . import db
 
+    progress("Opening the database")
     boot(home)
     folder = home.root / "backups"
     folder.mkdir(mode=0o700, exist_ok=True)
     os.chmod(folder, 0o700)
     target = folder / f"serpent-{datetime.now():%Y%m%d-%H%M%S}.db"
+    progress("Copying it with SQLite's online backup")
     src = sqlite3.connect(db.db_path())
     try:
         dst = sqlite3.connect(target)
@@ -1451,6 +1492,7 @@ def backup_db(home: Home) -> Path:
             dst.close()
     finally:
         src.close()
+    progress("Making the copy private (owner only)")
     os.chmod(target, 0o600)
     return target
 

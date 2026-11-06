@@ -212,3 +212,31 @@ def test_tui_mouse_clicks_switch_tabs(terminal):
     assert "No provider yet" in terminal.text
     terminal.send("m")  # mouse off, with a note
     assert "mouse off" in terminal.text
+
+
+def test_tui_start_and_stop_show_progress_and_are_quick(terminal):
+    def wait(pred, limit):
+        began = time.time()
+        while time.time() - began < limit:
+            terminal.pump(0.1)
+            if pred(terminal.text):
+                return time.time() - began
+        return None
+
+    assert wait(lambda t: "stopped" in t.splitlines()[0], 5) is not None
+    terminal.send("enter", wait=0.2)  # "Start the server"
+    assert wait(lambda t: "running" in t.splitlines()[0], 30) is not None
+    terminal.pump(3.2)  # let the toast fade
+    terminal.send("enter", wait=0.0)  # "Stop the server"
+    seen = []
+    began = time.time()
+    while time.time() - began < 6:
+        terminal.pump(0.05)
+        if "Stopping the server" in terminal.text:
+            seen.append(terminal.text)
+        if "stopped" in terminal.text.splitlines()[0] and seen:
+            break
+    assert seen, "no progress panel was shown"
+    panel = seen[-1]
+    assert "Found the server" in panel and "Asking it to finish" in panel
+    assert time.time() - began < 5, "stopping took far longer than the server needs"

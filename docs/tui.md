@@ -98,6 +98,13 @@ It never deletes the source folder and never runs `sudo`; for system pieces (a s
 service, a pip or pipx package) it prints the command for you to run. The same flow is
 `serpent uninstall` on the command line.
 
+## Progress on long actions
+
+Start, stop, restart, health check, doctor, self-test, backup, move and uninstall run in the
+background while a panel shows what is happening: each step ticked off as it finishes, a spinner
+on the current one, a moving bar and the elapsed time. Keys pressed meanwhile are ignored, and
+the result appears when it is done (a short toast for routine actions, a box for output).
+
 ## Appearance
 
 It uses 256 colours when the terminal has them, 8 otherwise, and plain ASCII borders if the

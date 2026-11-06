@@ -298,3 +298,40 @@ def test_port_owner_names_another_install(tmp_path):
         busy.listen()
         owner = cli.port_owner(busy.getsockname()[1])
     assert owner == "" or "pid" in owner  # lsof may be missing; never raises
+
+
+def test_a_dead_child_is_not_alive(tmp_path):
+    """A child that exited but was never reaped is a zombie; kill(pid, 0) still succeeds for it."""
+    import subprocess
+    import sys
+    import time
+
+    child = subprocess.Popen([sys.executable, "-c", "pass"])
+    time.sleep(0.5)  # exited, and nobody has waited for it
+    assert cli.pid_alive(child.pid) is False
+    assert cli.pid_alive(child.pid) is False  # and stays false once reaped
+    assert cli.pid_alive(None) is False and cli.pid_alive(0) is False
+    assert cli.pid_alive(__import__("os").getpid()) is True
+
+
+def test_stop_is_quick_for_a_server_we_started_and_reports_its_steps(home, run, monkeypatch):
+    """The terminal UI starts the server as its own child. Stopping it used to wait the full
+    10 s grace (the exited server was an unreaped zombie) and then recorded a false fault."""
+    import time
+
+    steps: list[str] = []
+    monkeypatch.setattr(cli, "PROGRESS", steps.append)
+    run("init")
+    port = cli.free_port()
+    run("start", "--port", str(port), "--wait", "30")
+    assert any("Looking for a free port" in s for s in steps)
+    assert any("Launching the server" in s for s in steps)
+    assert any(s.startswith("Healthy: serving on") for s in steps)
+    steps.clear()
+    began = time.monotonic()
+    run("stop")
+    assert time.monotonic() - began < 4, "stop waited out its grace period"
+    assert [s for s in steps if "Found the server" in s] and [s for s in steps if "stopped after" in s]
+    assert steps[-1].startswith("Cleaning up")
+    faults = home / "logs" / "faults.log"
+    assert not faults.exists() or "stop-forced" not in faults.read_text()
