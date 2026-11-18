@@ -62,7 +62,8 @@ are answered by one of these four.
 | --- | --- |
 | Account shows **invalid** | The provider answered 401/403 for that key. Fix the key (`PATCH /admin/accounts/<id>` with a new `api_key`, or remove and re-add it) and enable it again. |
 | Account shows **cooling down** | It failed recently (rate limit, 5xx, network). It retries automatically after an exponentially growing pause (`COOLDOWN_BASE_SECONDS` up to `COOLDOWN_MAX_SECONDS`). |
-| Serpent's count differs from the provider's | Serpent counts what it sent. The provider may bill differently, and its period may reset on another day. Failures that never produced a result are refunded by default. Compare the **Provider allowance** column with **Your limit** (SerpApi). |
+| Serpent's total is higher than the provider says is left | Serpent only counts calls that pass through it. If a key was also used directly (a script, another tool, an earlier setup) the dashboard overstates what is left. The Overview and Accounts pages warn about it. **Match counts to provider** (Accounts, or `POST /admin/accounts/sync-usage`) raises Serpent's count to the provider's; it never lowers one. Available for providers with a usage lookup (SerpApi). Move every caller onto the router so the counts stay right. |
+| Serpent's count differs from the provider's in other ways | The provider may bill differently, and its period may reset on another day. Failures that never produced a result are refunded by default. Compare the **Provider allowance** column with **Your limit** (SerpApi). |
 | A limit above the real plan | The provider will refuse before Serpent does. Keep your limit at or below the plan. |
 | Usage looks wrong after testing | Reset it: Accounts → Reset, or `serpent accounts reset <id>`. |
 | "Several accounts" warning | Pooling accounts at one provider may break its terms. Read [Responsible use](responsible-use.md). |

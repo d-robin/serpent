@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **The dashboard total could overstate what is left**: the router only sees calls that pass
+  through it, so usage of the same key elsewhere was invisible. Overview and Accounts now warn
+  when a provider reports fewer credits left than Serpent counts, and **Match counts to
+  provider** (`POST /admin/accounts/sync-usage`) catches Serpent up (it never lowers a count).
+- Accounts added after the page opened sat on the loading shimmer forever; their provider
+  allowance is now looked up automatically.
 - **Stopping a server started from the terminal UI took 10 s** and recorded a false
   `stop-forced` fault: the exited server was an unreaped child (a zombie) that `pid_alive()`
   still counted as running. Zombies are now reaped; stop takes a fraction of a second.

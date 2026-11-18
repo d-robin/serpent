@@ -1,5 +1,5 @@
 import {
-  ApiError, detectRole, get, getKey, setKey, type Preset, type Role, type Status,
+  ApiError, detectRole, get, getKey, post, setKey, type Preset, type ProviderUsage, type Role, type Status,
 } from './api';
 
 class Store {
@@ -15,6 +15,8 @@ class Store {
   intent = $state('');
   toasts = $state<{ id: number; text: string; bad: boolean }[]>([]);
   dialog = $state<{ title: string; body: string; label: string; danger: boolean; resolve: (ok: boolean) => void } | null>(null);
+  /** What each provider says about each key (cached; filled on demand by lookup()). */
+  usage = $state<Record<number, ProviderUsage | 'loading'>>({});
   private timer: ReturnType<typeof setInterval> | undefined;
   private nextToast = 1;
 
@@ -75,6 +77,28 @@ class Store {
     const id = this.nextToast++;
     this.toasts = [...this.toasts, { id, text, bad }];
     setTimeout(() => { this.toasts = this.toasts.filter((t) => t.id !== id); }, bad ? 6000 : 3000);
+  }
+
+  /** Ask the provider about one account (free call, not counted as usage). */
+  async lookup(id: number) {
+    this.usage[id] = 'loading';
+    try { this.usage[id] = await get<ProviderUsage>(`/admin/accounts/${id}/provider-usage`); }
+    catch (e) { this.usage[id] = { supported: true, error: e instanceof Error ? e.message : 'lookup failed' }; }
+  }
+
+  /** Raise Serpent's counts to what the providers say they served (never lowers a count). */
+  async syncUsage(): Promise<boolean> {
+    try {
+      const r = await post<{ changed: number; accounts: { error?: string }[] }>('/admin/accounts/sync-usage');
+      const failed = r.accounts.filter((a) => a.error).length;
+      this.toast(r.changed ? `Matched ${r.changed} account${r.changed === 1 ? '' : 's'} to the provider`
+        : failed ? 'Could not reach the provider for some accounts' : 'Already in step with the provider', failed > 0 && !r.changed);
+      await this.refresh();
+      return true;
+    } catch (e) {
+      this.toast(e instanceof Error ? e.message : 'sync failed', true);
+      return false;
+    }
   }
 
   /** An in-app confirmation (never the browser's own box). Resolves true when confirmed. */

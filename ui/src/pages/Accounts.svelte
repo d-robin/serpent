@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { del, get, patch, post, type Account, type ProviderUsage } from '../lib/api';
+  import { untrack } from 'svelte';
+  import { del, patch, post, type Account } from '../lib/api';
   import Bar from '../lib/Bar.svelte';
   import { ago, hasUsageLookup } from '../lib/format';
   import Icon from '../lib/Icon.svelte';
@@ -33,15 +33,25 @@
     if (ok) { f.label = ''; f.api_key = ''; f.notes = ''; agreed = false; open = false; }
   }
 
-  let usage = $state<Record<number, ProviderUsage | 'loading'>>({});
+  const usage = $derived(store.usage);
   const fmt = (n: number | null | undefined) => (n == null ? '?' : n.toLocaleString('en-US'));
-  async function check(a: Account) {
-    usage[a.id] = 'loading';
-    try { usage[a.id] = await get<ProviderUsage>(`/admin/accounts/${a.id}/provider-usage`); }
-    catch (e) { usage[a.id] = { supported: true, error: e instanceof Error ? e.message : 'lookup failed' }; }
-  }
-  const checkAll = () => { for (const g of groups) if (g.p.id !== -1 && hasUsageLookup(g.p)) for (const a of g.rows) void check(a); };
-  onMount(() => { if (store.isAdmin) checkAll(); });
+  const check = (a: Account) => store.lookup(a.id);
+  const checkAll = () => { for (const g of groups) if (g.p.id !== -1 && hasUsageLookup(g.p)) for (const a of g.rows) void store.lookup(a.id); };
+  // Look up the allowance of every account that has not been checked yet: on first open, after
+  // signing in, and for accounts added later (they used to sit on the loading shimmer forever).
+  $effect(() => {
+    if (!store.isAdmin) return;
+    for (const g of groups) {
+      if (g.p.id === -1 || !hasUsageLookup(g.p)) continue;
+      for (const a of g.rows) if (untrack(() => store.usage[a.id]) === undefined) void store.lookup(a.id);
+    }
+  });
+  // How many credits Serpent believes are left that the provider says are not.
+  const overstated = $derived(s.accounts.reduce((n, a) => {
+    const u = usage[a.id];
+    return n + (u && u !== 'loading' && u.supported && !u.error && u.remaining != null ? Math.max(0, (a.quota_limit - a.used) - u.remaining) : 0);
+  }, 0));
+  async function match() { await store.syncUsage(); for (const g of groups) for (const a of g.rows) if (g.p.id !== -1 && hasUsageLookup(g.p)) void store.lookup(a.id); }
 
   const stateOf = (a: Account) => (a.status === 'active' && a.on_cooldown ? 'cooling down' : a.status);
   const dot = (a: Account) => (a.status === 'invalid' ? 'bad' : a.status === 'disabled' ? '' : a.on_cooldown ? 'warn' : 'ok');
@@ -61,10 +71,17 @@
     {#if store.isAdmin}
       <button class="btn ghost" onclick={resetAll}>Reset usage</button>
       <button class="btn" onclick={checkAll}><Icon name="refresh" size={14} />Check allowances</button>
+      <button class="btn" onclick={match} title="Raise Serpent's counts to what the providers say they served. Never lowers a count.">Match counts to provider</button>
       <button class="btn primary" onclick={() => (open = true)} disabled={!s.providers.length}><Icon name="plus" size={14} />Add account</button>
     {/if}
   {/snippet}
 </PageHead>
+
+{#if overstated > 0}
+  <div class="note warn" style="margin-bottom:8px" role="status"><Icon name="alert" />
+    <span><strong>Serpent's counts are {overstated.toLocaleString('en-US')} credits higher than what the provider has left.</strong>
+      Usage outside the router (a script, another tool) is invisible to Serpent. <button class="btn sm" style="margin-left:8px" onclick={match}>Match counts to provider</button></span></div>
+{/if}
 
 {#if pooled}
   <div class="note warn" style="margin-bottom:8px"><Icon name="info" />

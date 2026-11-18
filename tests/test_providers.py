@@ -196,3 +196,54 @@ def test_provider_usage_errors_never_leak_the_key(make_client):
     a = _add_account(client, "SECRETKEY", sa["id"])
     got = client.get(f"/admin/accounts/{a['id']}/provider-usage", headers=ADMIN).json()
     assert got["error"] and "SECRETKEY" not in got["error"]
+
+
+def test_sync_usage_catches_up_with_the_provider_and_never_lowers(make_client):
+    used = {"serpapi": 146}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/account":
+            return httpx.Response(200, json={"plan_name": "Free", "searches_per_month": 250,
+                                              "this_month_usage": used["serpapi"],
+                                              "plan_searches_left": 250 - used["serpapi"],
+                                              "total_searches_left": 250 - used["serpapi"]})
+        return httpx.Response(200, json={})
+
+    client = make_client(handler)
+    sa = _add_provider(client, "serpapi", "", preset="serpapi")
+    plain = _add_provider(client, "other", "https://other.test")
+    a1 = client.post("/admin/accounts", headers=ADMIN, json={
+        "api_key": "SECRET-ONE", "label": "one", "quota_limit": 250, "provider_id": sa["id"]}).json()
+    a2 = client.post("/admin/accounts", headers=ADMIN, json={
+        "api_key": "SECRET-TWO", "label": "two", "quota_limit": 250, "provider_id": plain["id"]}).json()
+
+    got = client.post("/admin/accounts/sync-usage", headers=ADMIN).json()
+    assert got["changed"] == 1 and [r["id"] for r in got["accounts"]] == [a1["id"]]  # other has no lookup
+    assert got["accounts"][0]["before"] == 0 and got["accounts"][0]["after"] == 146
+    snap = {a["id"]: a for a in client.get("/admin/accounts", headers=ADMIN).json()["accounts"]}
+    assert snap[a1["id"]]["used"] == 146 and snap[a1["id"]]["remaining"] == 104
+    assert snap[a2["id"]]["used"] == 0  # untouched
+    assert client.get("/api/status").json()["quota_available_total"] == 104 + 250
+
+    again = client.post("/admin/accounts/sync-usage", headers=ADMIN).json()
+    assert again["changed"] == 0                       # idempotent
+    used["serpapi"] = 10                               # provider reports less (its period reset earlier)
+    low = client.post("/admin/accounts/sync-usage", headers=ADMIN).json()
+    assert low["changed"] == 0 and low["accounts"][0]["after"] == 146  # never lowered
+
+    assert client.post("/admin/accounts/sync-usage", headers=CLIENT).status_code == 403
+    assert "SECRET" not in str(got)                    # no key in the reply
+
+
+def test_sync_usage_reports_provider_errors_without_the_key(make_client):
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/account":
+            raise httpx.ConnectError(f"boom {req.url}")
+        return httpx.Response(200, json={})
+
+    client = make_client(handler)
+    sa = _add_provider(client, "serpapi", "", preset="serpapi")
+    client.post("/admin/accounts", headers=ADMIN, json={
+        "api_key": "SECRETKEY", "label": "acct", "quota_limit": 250, "provider_id": sa["id"]})
+    got = client.post("/admin/accounts/sync-usage", headers=ADMIN).json()
+    assert got["changed"] == 0 and got["accounts"][0]["error"] and "SECRETKEY" not in str(got)

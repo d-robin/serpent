@@ -480,6 +480,41 @@ def create_app(
             return {"supported": False, "error": None, "note": "this account has no provider"}
         return await provider_usage.fetch(app.state.client, provider, api_key)
 
+    @app.post("/admin/accounts/sync-usage")
+    async def admin_sync_usage(request: Request):
+        """Catch Serpent's counts up with what each provider says it has already served.
+
+        The router only sees calls that go through it. If a key was also used directly (a script,
+        another tool, an earlier setup) the dashboard would overstate what is left. This asks each
+        provider that offers a usage lookup and raises Serpent's count to match.  It never lowers
+        a count.  Providers without a usage endpoint are skipped.
+        """
+        security.require(request, "admin")
+        period = _period(settings)
+
+        def load():
+            rows = db.connection().execute(
+                "SELECT id, label, api_key, provider_id FROM accounts WHERE provider_id IS NOT NULL"
+            ).fetchall()
+            return [dict(r) for r in rows], {p.id: p for p in providers.list_providers()}
+
+        accts, provs = await _db(load)
+
+        async def one(a: dict) -> dict | None:
+            p = provs.get(a["provider_id"])
+            if p is None or provider_usage.adapter_for(p) is None:
+                return None
+            u = await provider_usage.fetch(app.state.client, p, a["api_key"])
+            item = {"id": a["id"], "label": a["label"], "provider": p.slug}
+            if u.get("error") or not isinstance(u.get("used"), int):
+                return {**item, "changed": False, "error": u.get("error") or "the provider gave no usage figure"}
+            before, after = await _db(quota.raise_used_to, a["id"], period, u["used"])
+            return {**item, "before": before, "after": after, "provider_used": u["used"],
+                    "changed": after > before}
+
+        results = [r for r in await asyncio.gather(*(one(a) for a in accts)) if r]
+        return {"period": period, "accounts": results, "changed": sum(1 for r in results if r["changed"])}
+
     @app.patch("/admin/accounts/{account_id}")
     async def admin_update(account_id: int, request: Request):
         security.require(request, "admin")

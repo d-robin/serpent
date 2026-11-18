@@ -206,6 +206,7 @@ Mutations require an `admin` key.
 | --- | --- |
 | `GET /admin/accounts` | Accounts with live quota |
 | `GET /admin/requests` | Paged call history: `limit`, `offset`, `outcome=ok\|failed`, `provider`, `q` (read key) |
+| `POST /admin/accounts/sync-usage` | Raise each account's count to what its provider says it served (SerpApi); never lowers a count |
 | `GET /admin/accounts/{id}/provider-usage` | What the provider says the key's plan allows (SerpApi only; free, not counted) |
 | `POST /admin/accounts` | `{"label","api_key","quota_limit","notes"}` |
 | `PATCH /admin/accounts/{id}` | `{"status":"active\|disabled","quota_limit","label","api_key","notes"}` |

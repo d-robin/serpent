@@ -428,6 +428,29 @@ def reset_account(account_id: int, period: str) -> bool:
         return cur.rowcount > 0
 
 
+def raise_used_to(account_id: int, period: str, used: int) -> tuple[int, int]:
+    """Raise (never lower) an account's used count to ``used``; returns (before, after).
+
+    For catching up with calls made outside the router: the provider says it served more than
+    Serpent has counted.  It never lowers a count, so calls Serpent did make are not forgotten.
+    """
+    used = max(0, int(used))
+    conn = db.connection()
+    with db.write_tx(conn):
+        row = conn.execute(
+            "SELECT used FROM usage WHERE account_id = ? AND period = ?", (account_id, period)
+        ).fetchone()
+        before = int(row["used"]) if row else 0
+        conn.execute(
+            """
+            INSERT INTO usage (account_id, period, used) VALUES (?, ?, ?)
+            ON CONFLICT(account_id, period) DO UPDATE SET used = MAX(usage.used, excluded.used)
+            """,
+            (account_id, period, used),
+        )
+    return before, max(before, used)
+
+
 def reset_all(period: str) -> int:
     conn = db.connection()
     with db.write_tx(conn):

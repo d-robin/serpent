@@ -1,6 +1,9 @@
 <script lang="ts">
+  import Icon from '../lib/Icon.svelte';
   import CountUp from '../lib/CountUp.svelte';
   import { ago, duration } from '../lib/format';
+  import { untrack } from 'svelte';
+  import { hasUsageLookup } from '../lib/format';
   import GettingStarted from '../lib/GettingStarted.svelte';
   import PageHead from '../lib/PageHead.svelte';
   import Bar from '../lib/Bar.svelte';
@@ -20,6 +23,19 @@
   );
   const tone = (a: { status: string; used: number; quota_limit: number; on_cooldown: boolean }) =>
     a.status !== 'active' ? 'off' : a.on_cooldown ? 'warn' : a.quota_limit && a.used / a.quota_limit >= 0.9 ? 'bad' : a.quota_limit && a.used / a.quota_limit >= 0.7 ? 'warn' : '';
+  // The router only counts calls that pass through it. Ask providers that can say, and warn when
+  // Serpent believes more is left than the provider does.
+  $effect(() => {
+    if (!store.isAdmin) return;
+    for (const p of s.providers) {
+      if (!hasUsageLookup(p)) continue;
+      for (const a of s.accounts) if (a.provider_id === p.id && untrack(() => store.usage[a.id]) === undefined) void store.lookup(a.id);
+    }
+  });
+  const looked = $derived(s.accounts.map((a) => ({ a, u: store.usage[a.id] }))
+    .filter((x) => x.u && x.u !== 'loading' && x.u.supported && !x.u.error && x.u.remaining != null));
+  const providerLeft = $derived(looked.reduce((n, x) => n + ((x.u as { remaining: number }).remaining), 0));
+  const overstated = $derived(looked.reduce((n, x) => n + Math.max(0, (x.a.quota_limit - x.a.used) - (x.u as { remaining: number }).remaining), 0));
   const failed = $derived(s.recent.filter((r) => r.status >= 400).length);
 </script>
 
@@ -37,6 +53,12 @@
           <span class={tone(a)} title="{a.label}: {a.used} of {a.quota_limit} used" style="flex-grow:{Math.max(1, a.quota_limit)}"><i style="width:{a.quota_limit ? Math.min(100, (a.used / a.quota_limit) * 100) : 0}%"></i></span>
         {/each}
       </div>
+      {#if overstated > 0}
+        <div class="note warn" style="margin-top:18px" role="status"><Icon name="alert" /><span>
+          <strong>Providers report {providerLeft.toLocaleString('en-US')} left, {overstated.toLocaleString('en-US')} fewer than Serpent counts.</strong>
+          Some usage happened outside the router.
+          {#if store.isAdmin}<button class="btn sm" style="margin-left:8px" onclick={() => store.syncUsage()}>Match counts to provider</button>{/if}</span></div>
+      {/if}
       <p class="muted" style="margin-top:12px">
         {s.accounts_usable} of {s.accounts_total} account{s.accounts_total === 1 ? '' : 's'} ready
         <span class="faint">· resets in {duration(s.resets_in_seconds)}</span>
