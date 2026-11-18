@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-18
+
 ### Fixed
 - **The dashboard total could overstate what is left**: the router only sees calls that pass
   through it, so usage of the same key elsewhere was invisible. Overview and Accounts now warn
