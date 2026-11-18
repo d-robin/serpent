@@ -19,6 +19,17 @@ paths of wherever the project sits, so there is nothing to hand-edit. The shippe
 `/home/pi/serpent` template. The unit caps `MemoryMax=320M` and restricts
 write access to `data/`.
 
+Two things to know on a **Raspberry Pi**:
+
+- Raspberry Pi OS ships with the kernel's memory cgroup off, so `MemoryMax=320M` is silently
+  ignored (`systemctl show serpent -p MemoryCurrent` says `[not set]`). Serpent uses about 50 to
+  70 MB regardless. To enforce the cap, add `cgroup_enable=memory cgroup_memory=1` to
+  `/boot/firmware/cmdline.txt` and reboot (this affects everything else on the Pi, so it is
+  optional).
+- Under systemd, `serpent status` and `serpent health` read the pid file of a *background* copy
+  and report "stopped". Check the service with `systemctl status serpent` and
+  `curl http://127.0.0.1:8971/healthz` instead.
+
 Use either systemd or `serpent start`, not both — they would fight over the
 port. systemd is the right choice for boot-time; `serpent start` is for manual runs and
 gives you `status`, `health`, `log` and `fault`. After changing `.env`:
